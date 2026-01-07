@@ -41,6 +41,209 @@ export type Database = {
         }
         Relationships: []
       }
+      inserts: {
+        Row: {
+          created_at: string
+          description: string | null
+          designer_notes: string | null
+          files_ready: boolean
+          id: string
+          is_designed: boolean
+          issue_id: string
+          name: string
+          notes: string | null
+          supplier_id: string | null
+          text_ready: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          designer_notes?: string | null
+          files_ready?: boolean
+          id?: string
+          is_designed?: boolean
+          issue_id: string
+          name: string
+          notes?: string | null
+          supplier_id?: string | null
+          text_ready?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          designer_notes?: string | null
+          files_ready?: boolean
+          id?: string
+          is_designed?: boolean
+          issue_id?: string
+          name?: string
+          notes?: string | null
+          supplier_id?: string | null
+          text_ready?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inserts_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inserts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issues: {
+        Row: {
+          created_at: string
+          created_by: string
+          design_start_date: string
+          distribution_month: string
+          id: string
+          issue_number: number
+          magazine_id: string
+          print_date: string
+          sketch_close_date: string
+          status: string
+          template_pages: number
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          design_start_date: string
+          distribution_month: string
+          id?: string
+          issue_number: number
+          magazine_id: string
+          print_date: string
+          sketch_close_date: string
+          status?: string
+          template_pages: number
+          theme: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          design_start_date?: string
+          distribution_month?: string
+          id?: string
+          issue_number?: number
+          magazine_id?: string
+          print_date?: string
+          sketch_close_date?: string
+          status?: string
+          template_pages?: number
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_magazine_id_fkey"
+            columns: ["magazine_id"]
+            isOneToOne: false
+            referencedRelation: "magazines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lineup_items: {
+        Row: {
+          content: string
+          created_at: string
+          designer_notes: string | null
+          files_ready: boolean
+          id: string
+          is_designed: boolean
+          issue_id: string
+          notes: string | null
+          page_end: number
+          page_start: number
+          source: string | null
+          supplier_id: string | null
+          text_ready: boolean
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          designer_notes?: string | null
+          files_ready?: boolean
+          id?: string
+          is_designed?: boolean
+          issue_id: string
+          notes?: string | null
+          page_end: number
+          page_start: number
+          source?: string | null
+          supplier_id?: string | null
+          text_ready?: boolean
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          designer_notes?: string | null
+          files_ready?: boolean
+          id?: string
+          is_designed?: boolean
+          issue_id?: string
+          notes?: string | null
+          page_end?: number
+          page_start?: number
+          source?: string | null
+          supplier_id?: string | null
+          text_ready?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineup_items_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineup_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      magazines: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -61,6 +264,39 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
