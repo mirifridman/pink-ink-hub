@@ -46,11 +46,35 @@ export default function Issues() {
     setSearchParams({});
   };
 
+  const handleEditDraft = () => {
+    if (!viewIssue) return;
+    
+    // Convert the issue back to NewIssueData format for editing
+    const issueData: NewIssueData = {
+      magazine_id: viewIssue.magazine_id,
+      issue_number: viewIssue.issue_number,
+      template_pages: viewIssue.template_pages as 52 | 68,
+      distribution_month: new Date(viewIssue.distribution_month),
+      theme: viewIssue.theme,
+      design_start_date: new Date(viewIssue.design_start_date),
+      sketch_close_date: new Date(viewIssue.sketch_close_date),
+      print_date: new Date(viewIssue.print_date),
+    };
+    
+    setNewIssueData(issueData);
+    setSearchParams({});
+    setShowLineupBuilder(true);
+  };
+
   // Show issue view if viewIssueId is set
   if (viewIssueId && viewIssue) {
     return (
       <AppLayout>
-        <IssueView issue={viewIssue} onBack={handleBackFromView} />
+        <IssueView 
+          issue={viewIssue} 
+          onBack={handleBackFromView} 
+          onEditDraft={handleEditDraft}
+        />
       </AppLayout>
     );
   }
