@@ -5,12 +5,11 @@ import {
   Users, 
   Bell, 
   Calendar,
-  Settings,
   Sparkles,
-  MessageSquare,
-  LogOut
+  MessageSquare
 } from "lucide-react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { UserMenu } from "./UserMenu";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -33,26 +32,14 @@ const menuItems: MenuItem[] = [
   { icon: MessageSquare, label: "הודעות לעורכת", path: "/messages", roles: ["admin", "editor", "publisher"] },
 ];
 
-const roleLabels: Record<AppRole, string> = {
-  admin: "מנהל",
-  editor: "עורך",
-  designer: "מעצב",
-  publisher: "צוות הוצאה לאור",
-};
 
 export function AppSidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { role, signOut, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
 
   const filteredMenuItems = menuItems.filter((item) => 
     hasPermission(item.roles)
   );
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
 
   return (
     <aside className="fixed top-0 right-0 h-screen w-64 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col z-50">
@@ -94,20 +81,9 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* User Info & Logout */}
-      <div className="p-4 border-t border-sidebar-border space-y-2">
-        {role && (
-          <div className="px-4 py-2 text-xs text-sidebar-foreground/60">
-            תפקיד: {roleLabels[role]}
-          </div>
-        )}
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>התנתק</span>
-        </button>
+      {/* User Menu */}
+      <div className="p-4 border-t border-sidebar-border">
+        <UserMenu />
       </div>
     </aside>
   );
