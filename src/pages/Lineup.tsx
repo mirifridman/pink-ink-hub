@@ -7,14 +7,18 @@ import {
   TableProperties, 
   FileText,
   Palette,
-  CheckCircle2,
   User,
-  Loader2
+  Loader2,
+  Send,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useIssues, useLineupItems, useSuppliers } from "@/hooks/useIssues";
+import { useIssues, useLineupItems } from "@/hooks/useIssues";
 import { format, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
+import { LineupRowActions } from "@/components/lineup/LineupRowActions";
+import { ReminderStatusIcon } from "@/components/lineup/ReminderStatusIcon";
+import { useAuth } from "@/hooks/useAuth";
 
 const getDeadlineStatus = (daysLeft: number): "critical" | "urgent" | "warning" | "success" | "waiting" => {
   if (daysLeft <= 0) return "critical";
@@ -33,6 +37,9 @@ const getStatusDisplay = (textReady: boolean, filesReady: boolean, isDesigned: b
 export default function Lineup() {
   const { data: issues, isLoading: issuesLoading } = useIssues();
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
+  const { hasPermission, user } = useAuth();
+  
+  const canManageReminders = hasPermission(["admin", "editor"]);
   
   // Filter only active issues (not drafts)
   const activeIssues = issues?.filter(i => i.status !== "draft") || [];
@@ -82,13 +89,23 @@ export default function Lineup() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-6 text-sm flex-wrap">
           <span className="text-muted-foreground">מקרא:</span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <StatusBadge status="critical">היום</StatusBadge>
             <StatusBadge status="urgent">יומיים</StatusBadge>
             <StatusBadge status="warning">ממתין</StatusBadge>
             <StatusBadge status="success">מאושר</StatusBadge>
+          </div>
+          <div className="flex items-center gap-3 text-muted-foreground border-r pr-4">
+            <div className="flex items-center gap-1">
+              <Send className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs">הקצאה נשלחה</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Bell className="w-4 h-4 text-orange-500" />
+              <span className="text-xs">תזכורת נשלחה</span>
+            </div>
           </div>
         </div>
 
@@ -111,6 +128,7 @@ export default function Lineup() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
+                    <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-20">עמודים</th>
                     <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
@@ -119,6 +137,9 @@ export default function Lineup() {
                     <th className="p-4 text-right font-medium text-muted-foreground w-28">דדליין</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-24">סטטוס תוכן</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-24">סטטוס עיצוב</th>
+                    {canManageReminders && (
+                      <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -134,11 +155,16 @@ export default function Lineup() {
                       <tr
                         key={item.id}
                         className={cn(
-                          "border-b last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer",
+                          "border-b last:border-b-0 hover:bg-muted/30 transition-colors group",
                           daysLeft <= 0 && "bg-red-500/5",
                           daysLeft > 0 && daysLeft <= 2 && "bg-orange-500/5"
                         )}
                       >
+                        <td className="p-4">
+                          {item.supplier && (
+                            <ReminderStatusIcon lineupItemId={item.id} />
+                          )}
+                        </td>
                         <td className="p-4 text-muted-foreground">{pages}</td>
                         <td className="p-4 font-medium">{item.content}</td>
                         <td className="p-4">
@@ -174,6 +200,29 @@ export default function Lineup() {
                             {designStatus.label}
                           </span>
                         </td>
+                        {canManageReminders && (
+                          <td className="p-4">
+                            {item.supplier && selectedIssue && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <LineupRowActions
+                                  lineupItemId={item.id}
+                                  supplierId={item.supplier_id || null}
+                                  supplierName={item.supplier?.name || null}
+                                  supplierPhone={item.supplier?.phone || null}
+                                  content={item.content}
+                                  pageStart={item.page_start}
+                                  pageEnd={item.page_end}
+                                  magazineName={selectedIssue.magazine?.name || "מגזין"}
+                                  issueNumber={selectedIssue.issue_number}
+                                  issueTheme={selectedIssue.theme}
+                                  issueId={selectedIssue.id}
+                                  designStartDate={selectedIssue.design_start_date}
+                                  editorName={"העורך"}
+                                />
+                              </div>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
