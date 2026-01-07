@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Save } from "lucide-react";
 import { PagePickerModal } from "./PagePickerModal";
-import { SupplierSelect } from "./SupplierSelect";
+import { MultiSupplierSelect } from "./MultiSupplierSelect";
 import { EditorSelect } from "./EditorSelect";
 import { IssueEditorsSection } from "./IssueEditorsSection";
 import { NewIssueData } from "./NewIssueModal";
@@ -43,7 +43,7 @@ interface LineupRow {
   id: string;
   pages: number[];
   content: string;
-  supplierId?: string;
+  supplierIds: string[];
   source: string;
   notes: string;
   responsibleEditorId?: string;
@@ -53,7 +53,7 @@ interface InsertRow {
   id: string;
   name: string;
   description: string;
-  supplierId?: string;
+  supplierIds: string[];
   notes: string;
   responsibleEditorId?: string;
 }
@@ -106,7 +106,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         id: item.id,
         pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
         content: item.content,
-        supplierId: item.supplier_id || undefined,
+        supplierIds: item.supplier_id ? [item.supplier_id] : [],
         source: item.source || "",
         notes: item.notes || "",
         responsibleEditorId: (item as any).responsible_editor_id || undefined,
@@ -124,7 +124,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         id: item.id,
         name: item.name,
         description: item.description || "",
-        supplierId: item.supplier_id || undefined,
+        supplierIds: item.supplier_id ? [item.supplier_id] : [],
         notes: item.notes || "",
         responsibleEditorId: (item as any).responsible_editor_id || undefined,
       }));
@@ -139,9 +139,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         id: `copied-${idx}`,
         pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
         content: item.content,
-        supplierId: item.supplier_id || undefined,
+        supplierIds: item.supplier_id ? [item.supplier_id] : [],
         source: item.source || "",
         notes: item.notes || "",
+        responsibleEditorId: undefined,
       }));
       setLineupRows(copiedRows);
     }
@@ -190,7 +191,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       id: `new-${Date.now()}`,
       pages: [],
       content: "",
-      supplierId: undefined,
+      supplierIds: [],
       source: "",
       notes: "",
       responsibleEditorId: undefined,
@@ -213,7 +214,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       id: `insert-${Date.now()}`,
       name: "",
       description: "",
-      supplierId: undefined,
+      supplierIds: [],
       notes: "",
       responsibleEditorId: undefined,
     };
@@ -279,7 +280,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 page_start: sortedPages[0],
                 page_end: sortedPages[sortedPages.length - 1],
                 content: row.content,
-                supplier_id: row.supplierId || null,
+                supplier_id: row.supplierIds[0] || null,
                 source: row.source || null,
                 notes: row.notes || null,
                 responsible_editor_id: row.responsibleEditorId || null,
@@ -290,7 +291,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 page_start: sortedPages[0],
                 page_end: sortedPages[sortedPages.length - 1],
                 content: row.content,
-                supplier_id: row.supplierId || null,
+                supplier_id: row.supplierIds[0] || null,
                 source: row.source || null,
                 notes: row.notes || null,
                 text_ready: false,
@@ -325,7 +326,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   id: insert.id,
                   name: insert.name,
                   description: insert.description || null,
-                  supplier_id: insert.supplierId || null,
+                  supplier_id: insert.supplierIds[0] || null,
                   notes: insert.notes || null,
                   responsible_editor_id: insert.responsibleEditorId || null,
                 } as any);
@@ -334,7 +335,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   issue_id: existingIssueId,
                   name: insert.name,
                   description: insert.description || null,
-                  supplier_id: insert.supplierId || null,
+                  supplier_id: insert.supplierIds[0] || null,
                   notes: insert.notes || null,
                   text_ready: false,
                   files_ready: false,
@@ -378,7 +379,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               page_start: sortedPages[0],
               page_end: sortedPages[sortedPages.length - 1],
               content: row.content,
-              supplier_id: row.supplierId || null,
+              supplier_id: row.supplierIds[0] || null,
               source: row.source || null,
               notes: row.notes || null,
               text_ready: false,
@@ -398,7 +399,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 issue_id: issue.id,
                 name: insert.name,
                 description: insert.description || null,
-                supplier_id: insert.supplierId || null,
+                supplier_id: insert.supplierIds[0] || null,
                 notes: insert.notes || null,
                 text_ready: false,
                 files_ready: false,
@@ -580,9 +581,9 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   />
                 </TableCell>
                 <TableCell>
-                  <SupplierSelect
-                    value={row.supplierId}
-                    onChange={(id) => updateRow(row.id, { supplierId: id })}
+                  <MultiSupplierSelect
+                    value={row.supplierIds}
+                    onChange={(ids) => updateRow(row.id, { supplierIds: ids })}
                   />
                 </TableCell>
                 <TableCell>
@@ -678,9 +679,9 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                       />
                     </TableCell>
                     <TableCell>
-                      <SupplierSelect
-                        value={row.supplierId}
-                        onChange={(id) => updateInsertRow(row.id, { supplierId: id })}
+                      <MultiSupplierSelect
+                        value={row.supplierIds}
+                        onChange={(ids) => updateInsertRow(row.id, { supplierIds: ids })}
                       />
                     </TableCell>
                     <TableCell>
