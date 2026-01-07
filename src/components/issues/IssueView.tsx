@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils";
 interface IssueViewProps {
   issue: Issue & { magazine: Magazine };
   onBack: () => void;
+  onEditDraft?: () => void;
 }
 
-export function IssueView({ issue, onBack }: IssueViewProps) {
+export function IssueView({ issue, onBack, onEditDraft }: IssueViewProps) {
   const { role } = useAuth();
   const { data: lineupItems = [], isLoading: loadingLineup } = useLineupItems(issue.id);
   const { data: inserts = [], isLoading: loadingInserts } = useInserts(issue.id);
@@ -57,10 +58,19 @@ export function IssueView({ issue, onBack }: IssueViewProps) {
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header with Back Button */}
-      <Button variant="ghost" onClick={onBack} className="mb-4">
-        <ArrowRight className="w-4 h-4 ml-2" />
-        חזרה לרשימה
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowRight className="w-4 h-4 ml-2" />
+          חזרה לרשימה
+        </Button>
+        
+        {issue.status === "draft" && isEditor && onEditDraft && (
+          <Button onClick={onEditDraft} className="gradient-neon text-white">
+            <Pencil className="w-4 h-4 ml-2" />
+            חזרה לעריכה
+          </Button>
+        )}
+      </div>
 
       {/* Issue Header */}
       <div className="p-6 bg-muted/50 rounded-lg space-y-4">
