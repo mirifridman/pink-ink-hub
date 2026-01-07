@@ -164,6 +164,77 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "create_invitation_link") {
+      if (!email || !role) {
+        return new Response(JSON.stringify({ error: "Email and role are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check if user already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const userExists = existingUsers?.users?.some(u => u.email === email);
+      
+      if (userExists) {
+        return new Response(JSON.stringify({ error: "משתמש עם אימייל זה כבר קיים במערכת" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check for existing invitation
+      const { data: existingInvitation } = await supabaseAdmin
+        .from("user_invitations")
+        .select("*")
+        .eq("email", email)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (existingInvitation) {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          token: existingInvitation.id,
+          invitation: existingInvitation,
+          message: "Using existing invitation"
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Create invitation record
+      const { data: invitation, error: inviteError } = await supabaseAdmin
+        .from("user_invitations")
+        .insert({
+          email,
+          full_name: fullName || null,
+          role,
+          invited_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (inviteError) {
+        console.error("Error creating invitation:", inviteError);
+        return new Response(JSON.stringify({ error: inviteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Created invitation:", invitation.id);
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        token: invitation.id,
+        invitation 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "cancel_invitation") {
       if (!invitationId) {
         return new Response(JSON.stringify({ error: "Invitation ID is required" }), {
@@ -234,6 +305,62 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "process_invitation") {
+      const { userId, invitationId: processInvitationId } = await req.json();
+      
+      if (!userId || !processInvitationId) {
+        return new Response(JSON.stringify({ error: "User ID and Invitation ID are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get invitation details
+      const { data: invitation, error: getError } = await supabaseAdmin
+        .from("user_invitations")
+        .select("*")
+        .eq("id", processInvitationId)
+        .single();
+
+      if (getError || !invitation) {
+        return new Response(JSON.stringify({ error: "Invitation not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Assign the role from the invitation
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .upsert({ 
+          user_id: userId, 
+          role: invitation.role 
+        }, { 
+          onConflict: "user_id" 
+        });
+
+      if (roleError) {
+        console.error("Error assigning role:", roleError);
+        return new Response(JSON.stringify({ error: roleError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Mark invitation as used
+      await supabaseAdmin
+        .from("user_invitations")
+        .update({ status: "accepted" })
+        .eq("id", processInvitationId);
+
+      console.log("Processed invitation for user:", userId, "with role:", invitation.role);
+
+      return new Response(JSON.stringify({ success: true, role: invitation.role }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
