@@ -7,12 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, ArrowRight, Calendar, Pencil, Eye } from "lucide-react";
+import { MessageSquare, ArrowRight, Calendar, Pencil, Eye, Trash2 } from "lucide-react";
 import { Issue, Magazine, LineupItem, Insert, Supplier, getRowColor } from "@/types/database";
-import { useLineupItems, useInserts, useUpdateLineupItem, useUpdateInsert } from "@/hooks/useIssues";
+import { useLineupItems, useInserts, useUpdateLineupItem, useUpdateInsert, useDeleteIssue } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { IssueProgressBar } from "./IssueProgressBar";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface IssueViewProps {
   issue: Issue & { magazine: Magazine };
@@ -26,8 +37,14 @@ export function IssueView({ issue, onBack, onEditDraft }: IssueViewProps) {
   const { data: inserts = [], isLoading: loadingInserts } = useInserts(issue.id);
   const updateLineupItem = useUpdateLineupItem();
   const updateInsert = useUpdateInsert();
+  const deleteIssue = useDeleteIssue();
 
   const isEditor = role === "admin" || role === "editor";
+
+  const handleDeleteIssue = async () => {
+    await deleteIssue.mutateAsync(issue.id);
+    onBack();
+  };
   const isDesigner = role === "designer";
 
   const handleLineupUpdate = (id: string, field: keyof LineupItem, value: boolean | string) => {
@@ -64,12 +81,42 @@ export function IssueView({ issue, onBack, onEditDraft }: IssueViewProps) {
           חזרה לרשימה
         </Button>
         
-        {issue.status === "draft" && isEditor && onEditDraft && (
-          <Button onClick={onEditDraft} className="gradient-neon text-white">
-            <Pencil className="w-4 h-4 ml-2" />
-            חזרה לעריכה
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {isEditor && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  מחק גיליון
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent dir="rtl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    פעולה זו תמחק את הגיליון "{issue.magazine.name} #{issue.issue_number}" לצמיתות, כולל כל הליינאפ והאינסרטים. לא ניתן לבטל פעולה זו.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row-reverse gap-2">
+                  <AlertDialogCancel>ביטול</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteIssue}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    מחק
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          
+          {issue.status === "draft" && isEditor && onEditDraft && (
+            <Button onClick={onEditDraft} className="gradient-neon text-white">
+              <Pencil className="w-4 h-4 ml-2" />
+              חזרה לעריכה
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Issue Header */}

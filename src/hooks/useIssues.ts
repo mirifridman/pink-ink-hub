@@ -121,6 +121,32 @@ export function useUpdateIssue() {
   });
 }
 
+export function useDeleteIssue() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Delete related data first (lineup_items, inserts, issue_editors)
+      await supabase.from("lineup_items").delete().eq("issue_id", id);
+      await supabase.from("inserts").delete().eq("issue_id", id);
+      await supabase.from("issue_editors").delete().eq("issue_id", id);
+      
+      const { error } = await supabase
+        .from("issues")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["issues"] });
+      toast.success("הגיליון נמחק בהצלחה");
+    },
+    onError: (error) => {
+      toast.error("שגיאה במחיקת הגיליון: " + error.message);
+    },
+  });
+}
+
 // Suppliers
 export function useSuppliers() {
   return useQuery({
