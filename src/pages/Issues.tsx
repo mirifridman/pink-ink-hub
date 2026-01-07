@@ -61,6 +61,7 @@ export default function Issues() {
       design_start_date: new Date(viewIssue.design_start_date),
       sketch_close_date: new Date(viewIssue.sketch_close_date),
       print_date: new Date(viewIssue.print_date),
+      editor_ids: [],
     };
     
     setNewIssueData(issueData);

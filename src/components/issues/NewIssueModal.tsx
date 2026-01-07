@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useMagazines, useLatestIssueNumber, useIssues } from "@/hooks/useIssues";
+import { useMagazines, useLatestIssueNumber, useIssues, useEditors } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 
 interface NewIssueModalProps {
   open: boolean;
@@ -31,12 +32,14 @@ export interface NewIssueData {
   sketch_close_date: Date;
   print_date: Date;
   copy_lineup_from?: string;
+  editor_ids: string[];
 }
 
 export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalProps) {
   const { user } = useAuth();
   const { data: magazines, isLoading: magazinesLoading } = useMagazines();
   const { data: issues } = useIssues();
+  const { data: editors } = useEditors();
   
   const [magazineId, setMagazineId] = useState<string>("");
   const [templatePages, setTemplatePages] = useState<"52" | "68">("52");
@@ -48,6 +51,7 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
   const [printDate, setPrintDate] = useState<Date>();
   const [copyLineup, setCopyLineup] = useState(false);
   const [sourceIssueId, setSourceIssueId] = useState<string>("");
+  const [selectedEditorIds, setSelectedEditorIds] = useState<string[]>([]);
 
   const { data: latestNumber } = useLatestIssueNumber(magazineId);
 
@@ -81,7 +85,18 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
       sketch_close_date: sketchCloseDate!,
       print_date: printDate!,
       copy_lineup_from: copyLineup ? sourceIssueId : undefined,
+      editor_ids: selectedEditorIds,
     });
+  };
+
+  const handleEditorSelect = (editorId: string) => {
+    if (editorId && !selectedEditorIds.includes(editorId)) {
+      setSelectedEditorIds([...selectedEditorIds, editorId]);
+    }
+  };
+
+  const handleRemoveEditor = (editorId: string) => {
+    setSelectedEditorIds(selectedEditorIds.filter(id => id !== editorId));
   };
 
   const resetForm = () => {
@@ -95,7 +110,10 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
     setPrintDate(undefined);
     setCopyLineup(false);
     setSourceIssueId("");
+    setSelectedEditorIds([]);
   };
+
+  const availableEditors = editors?.filter(e => !selectedEditorIds.includes(e.id)) || [];
 
   return (
     <Dialog open={open} onOpenChange={(o) => {
@@ -180,6 +198,39 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          {/* Editors Selection */}
+          <div className="space-y-2">
+            <Label>עורכים אחראים</Label>
+            <Select onValueChange={handleEditorSelect} value="">
+              <SelectTrigger>
+                <SelectValue placeholder="בחר עורכים" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableEditors.map((editor) => (
+                  <SelectItem key={editor.id} value={editor.id}>
+                    {editor.full_name || editor.email || "עורך"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedEditorIds.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedEditorIds.map((editorId) => {
+                  const editor = editors?.find(e => e.id === editorId);
+                  return (
+                    <Badge key={editorId} variant="secondary" className="gap-1">
+                      {editor?.full_name || editor?.email || "עורך"}
+                      <X 
+                        className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                        onClick={() => handleRemoveEditor(editorId)}
+                      />
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Theme */}

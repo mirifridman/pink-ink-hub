@@ -77,7 +77,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   // Editors data
   const { data: allEditors = [] } = useEditors();
   const { data: issueEditors = [] } = useIssueEditors(existingIssueId);
-  const [pendingEditors, setPendingEditors] = useState<string[]>([]);
+  const [pendingEditors, setPendingEditors] = useState<string[]>(issueData.editor_ids || []);
   
   const [lineupRows, setLineupRows] = useState<LineupRow[]>([]);
   const [hasInserts, setHasInserts] = useState(false);
