@@ -10,7 +10,8 @@ import {
   User,
   Loader2,
   Send,
-  Bell
+  Bell,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIssues, useLineupItems } from "@/hooks/useIssues";
@@ -18,6 +19,7 @@ import { format, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { LineupRowActions } from "@/components/lineup/LineupRowActions";
 import { ReminderStatusIcon } from "@/components/lineup/ReminderStatusIcon";
+import { AssignmentButton } from "@/components/lineup/AssignmentButton";
 import { useAuth } from "@/hooks/useAuth";
 
 const getDeadlineStatus = (daysLeft: number): "critical" | "urgent" | "warning" | "success" | "waiting" => {
@@ -138,6 +140,9 @@ export default function Lineup() {
                     <th className="p-4 text-right font-medium text-muted-foreground w-24">סטטוס תוכן</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-24">סטטוס עיצוב</th>
                     {canManageReminders && (
+                      <th className="p-4 text-right font-medium text-muted-foreground w-28">הקצאה</th>
+                    )}
+                    {canManageReminders && (
                       <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
                     )}
                   </tr>
@@ -200,6 +205,29 @@ export default function Lineup() {
                             {designStatus.label}
                           </span>
                         </td>
+                        {canManageReminders && (
+                          <td className="p-4">
+                            {item.supplier && selectedIssue && (
+                              <AssignmentButton
+                                lineupItemId={item.id}
+                                supplierId={item.supplier_id || null}
+                                supplierName={item.supplier?.name || null}
+                                supplierPhone={item.supplier?.phone || null}
+                                content={item.content}
+                                pageStart={item.page_start}
+                                pageEnd={item.page_end}
+                                magazineName={selectedIssue.magazine?.name || "מגזין"}
+                                issueNumber={selectedIssue.issue_number}
+                                issueTheme={selectedIssue.theme}
+                                issueId={selectedIssue.id}
+                                designStartDate={selectedIssue.design_start_date}
+                                editorName={"העורך"}
+                                assignmentSent={(item as any).assignment_sent}
+                                assignmentSentDate={(item as any).assignment_sent_date}
+                              />
+                            )}
+                          </td>
+                        )}
                         {canManageReminders && (
                           <td className="p-4">
                             {item.supplier && selectedIssue && (
