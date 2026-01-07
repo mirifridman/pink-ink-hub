@@ -126,12 +126,9 @@ export function PagePickerModal({
                   disabled={occupied}
                   onMouseDown={() => handleMouseDown(page)}
                   onMouseUp={() => handleMouseUp(page)}
-                  onClick={() => {
-                    if (dragStart === null) handlePageClick(page);
-                  }}
                   className={cn(
                     "aspect-square rounded-md text-sm font-medium transition-all",
-                    "flex items-center justify-center",
+                    "flex items-center justify-center select-none",
                     occupied && "bg-muted text-muted-foreground cursor-not-allowed opacity-50",
                     !occupied && !selected && "bg-background border-2 border-border hover:border-primary cursor-pointer",
                     selected && "bg-primary text-primary-foreground"
