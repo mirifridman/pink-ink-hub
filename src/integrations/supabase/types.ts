@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      insert_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          insert_id: string
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insert_id: string
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insert_id?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insert_suppliers_insert_id_fkey"
+            columns: ["insert_id"]
+            isOneToOne: false
+            referencedRelation: "inserts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insert_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inserts: {
         Row: {
           created_at: string
@@ -199,6 +235,42 @@ export type Database = {
             columns: ["magazine_id"]
             isOneToOne: false
             referencedRelation: "magazines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lineup_item_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          lineup_item_id: string
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lineup_item_id: string
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lineup_item_id?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineup_item_suppliers_lineup_item_id_fkey"
+            columns: ["lineup_item_id"]
+            isOneToOne: false
+            referencedRelation: "lineup_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineup_item_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
