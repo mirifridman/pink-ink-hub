@@ -158,13 +158,17 @@ export function usePendingReminders() {
         // Determine contact method based on supplier info
         const hasEmail = !!reminder.supplier?.email;
         const hasPhone = !!reminder.supplier?.phone;
-        let contactMethod: "email" | "whatsapp" | "both";
+        const hasContactInfo = hasEmail || hasPhone;
+        
+        let contactMethod: "email" | "whatsapp" | "both" | "none";
         if (hasEmail && hasPhone) {
           contactMethod = "both";
         } else if (hasEmail) {
           contactMethod = "email";
-        } else {
+        } else if (hasPhone) {
           contactMethod = "whatsapp";
+        } else {
+          contactMethod = "none";
         }
 
         return {
@@ -173,6 +177,7 @@ export function usePendingReminders() {
           itemTitle: reminder.lineup_item?.content || reminder.insert?.name || reminder.message,
           type,
           contactMethod,
+          hasContactInfo,
         };
       });
     },
