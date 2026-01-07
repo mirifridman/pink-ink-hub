@@ -14,6 +14,8 @@ interface EditorSelectProps {
   disabled?: boolean;
 }
 
+export const SHARED_EDITING_VALUE = "shared";
+
 export function EditorSelect({ value, onChange, editors, placeholder = "בחר עורך", disabled }: EditorSelectProps) {
   return (
     <Select
@@ -26,6 +28,7 @@ export function EditorSelect({ value, onChange, editors, placeholder = "בחר �
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="none">ללא</SelectItem>
+        <SelectItem value={SHARED_EDITING_VALUE}>עריכה משותפת</SelectItem>
         {editors.map((editor) => (
           <SelectItem key={editor.id} value={editor.id}>
             {editor.full_name || editor.email || "עורך"}
@@ -34,4 +37,11 @@ export function EditorSelect({ value, onChange, editors, placeholder = "בחר �
       </SelectContent>
     </Select>
   );
+}
+
+export function getEditorDisplayName(editorId: string | null | undefined, editors: Editor[]): string {
+  if (!editorId) return "ללא";
+  if (editorId === SHARED_EDITING_VALUE) return "עריכה משותפת";
+  const editor = editors.find(e => e.id === editorId);
+  return editor?.full_name || editor?.email || "עורך";
 }
