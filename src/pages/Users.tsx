@@ -189,7 +189,8 @@ export default function UsersPage() {
         throw new Error(response.data.error);
       }
 
-      const signupUrl = `${window.location.origin}/auth?invite=${response.data.token}&email=${encodeURIComponent(newUserEmail)}`;
+      const invitationId = response.data.invitationId;
+      const signupUrl = `${window.location.origin}/auth?invite=${invitationId}&email=${encodeURIComponent(newUserEmail)}&name=${encodeURIComponent(newUserName || '')}&role=${encodeURIComponent(newUserRole)}`;
       setInvitationLink(signupUrl);
       setShowLinkModal(true);
       setIsAddUserOpen(false);
