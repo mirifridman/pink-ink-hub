@@ -36,12 +36,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/issues" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
                 <Issues />
               </ProtectedRoute>
             } />
             <Route path="/lineup" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
                 <Lineup />
               </ProtectedRoute>
             } />
@@ -51,7 +51,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/team" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
                 <Team />
               </ProtectedRoute>
             } />
@@ -61,12 +61,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/schedule" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
                 <Schedule />
               </ProtectedRoute>
             } />
             <Route path="/messages" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
                 <Messages />
               </ProtectedRoute>
             } />

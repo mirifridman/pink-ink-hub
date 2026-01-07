@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NeonCard, NeonCardContent } from "@/components/ui/NeonCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   TableProperties, 
   FileText,
@@ -11,7 +14,8 @@ import {
   Loader2,
   Send,
   Bell,
-  Check
+  Check,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIssues, useLineupItems } from "@/hooks/useIssues";
@@ -20,7 +24,12 @@ import { he } from "date-fns/locale";
 import { LineupRowActions } from "@/components/lineup/LineupRowActions";
 import { ReminderStatusIcon } from "@/components/lineup/ReminderStatusIcon";
 import { AssignmentButton } from "@/components/lineup/AssignmentButton";
+import { EditableStatusCell } from "@/components/lineup/EditableStatusCell";
+import { EditableTextField } from "@/components/lineup/EditableTextField";
+import { LineupComments } from "@/components/lineup/LineupComments";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const getDeadlineStatus = (daysLeft: number): "critical" | "urgent" | "warning" | "success" | "waiting" => {
   if (daysLeft <= 0) return "critical";
@@ -39,9 +48,11 @@ const getStatusDisplay = (textReady: boolean, filesReady: boolean, isDesigned: b
 export default function Lineup() {
   const { data: issues, isLoading: issuesLoading } = useIssues();
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, role } = useAuth();
+  const queryClient = useQueryClient();
   
   const canManageReminders = hasPermission(["admin", "editor"]);
+  const canEdit = role === "admin" || role === "editor";
   
   // Filter only active issues (not drafts)
   const activeIssues = issues?.filter(i => i.status !== "draft") || [];
@@ -49,7 +60,7 @@ export default function Lineup() {
   // Set first active issue as default when loaded
   const effectiveIssueId = selectedIssueId || activeIssues[0]?.id || "";
   
-  const { data: lineupItems, isLoading: lineupLoading } = useLineupItems(effectiveIssueId);
+  const { data: lineupItems, isLoading: lineupLoading, refetch: refetchLineup } = useLineupItems(effectiveIssueId);
   
   const selectedIssue = activeIssues.find(i => i.id === effectiveIssueId);
   
@@ -59,6 +70,25 @@ export default function Lineup() {
     const closeDate = new Date(selectedIssue.sketch_close_date);
     return differenceInDays(closeDate, new Date());
   };
+
+  // Fetch comments count for each lineup item
+  const [commentsCounts, setCommentsCounts] = useState<Record<string, number>>({});
+  
+  useEffect(() => {
+    const fetchCommentsCounts = async () => {
+      if (!lineupItems?.length) return;
+      const counts: Record<string, number> = {};
+      for (const item of lineupItems) {
+        const { count } = await supabase
+          .from("lineup_comments")
+          .select("*", { count: "exact", head: true })
+          .eq("lineup_item_id", item.id);
+        counts[item.id] = count || 0;
+      }
+      setCommentsCounts(counts);
+    };
+    fetchCommentsCounts();
+  }, [lineupItems]);
 
   const isLoading = issuesLoading || lineupLoading;
 
@@ -135,10 +165,11 @@ export default function Lineup() {
                     <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-24">מקור</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-48">הערות</th>
+                    <th className="p-4 text-right font-medium text-muted-foreground w-12">💬</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-28">דדליין</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-24">סטטוס תוכן</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-24">סטטוס עיצוב</th>
+                    <th className="p-4 text-center font-medium text-muted-foreground w-16">📄</th>
+                    <th className="p-4 text-center font-medium text-muted-foreground w-16">📁</th>
+                    <th className="p-4 text-center font-medium text-muted-foreground w-16">🎨</th>
                     {canManageReminders && (
                       <th className="p-4 text-right font-medium text-muted-foreground w-28">הקצאה</th>
                     )}
@@ -171,7 +202,19 @@ export default function Lineup() {
                           )}
                         </td>
                         <td className="p-4 text-muted-foreground">{pages}</td>
-                        <td className="p-4 font-medium">{item.content}</td>
+                        <td className="p-4">
+                          {canEdit ? (
+                            <EditableTextField
+                              lineupItemId={item.id}
+                              field="content"
+                              initialValue={item.content}
+                              placeholder="תוכן"
+                              onUpdate={() => refetchLineup()}
+                            />
+                          ) : (
+                            <span className="font-medium">{item.content}</span>
+                          )}
+                        </td>
                         <td className="p-4">
                           {item.supplier ? (
                             <div className="flex items-center gap-2">
@@ -182,9 +225,35 @@ export default function Lineup() {
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </td>
-                        <td className="p-4 text-sm text-muted-foreground">{item.source || "-"}</td>
-                        <td className="p-4 text-sm text-muted-foreground truncate max-w-[200px]" title={item.notes || ""}>
-                          {item.notes || "-"}
+                        <td className="p-4">
+                          {canEdit ? (
+                            <EditableTextField
+                              lineupItemId={item.id}
+                              field="source"
+                              initialValue={item.source || ""}
+                              placeholder="מקור"
+                              onUpdate={() => refetchLineup()}
+                            />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">{item.source || "-"}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="gap-1 relative">
+                                <MessageSquare className="w-4 h-4" />
+                                {(commentsCounts[item.id] || 0) > 0 && (
+                                  <Badge variant="secondary" className="h-5 min-w-[20px] text-xs">
+                                    {commentsCounts[item.id]}
+                                  </Badge>
+                                )}
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                              <LineupComments lineupItemId={item.id} contentTitle={item.content} />
+                            </DialogContent>
+                          </Dialog>
                         </td>
                         <td className="p-4">
                           {selectedIssue?.sketch_close_date && (
@@ -193,17 +262,29 @@ export default function Lineup() {
                             </StatusBadge>
                           )}
                         </td>
-                        <td className="p-4">
-                          <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border", contentStatus.color)}>
-                            <FileText className="w-3 h-3" />
-                            {contentStatus.label}
-                          </span>
+                        <td className="p-4 text-center">
+                          <EditableStatusCell
+                            lineupItemId={item.id}
+                            field="text_ready"
+                            initialValue={item.text_ready}
+                            onUpdate={() => refetchLineup()}
+                          />
                         </td>
-                        <td className="p-4">
-                          <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border", designStatus.color)}>
-                            <Palette className="w-3 h-3" />
-                            {designStatus.label}
-                          </span>
+                        <td className="p-4 text-center">
+                          <EditableStatusCell
+                            lineupItemId={item.id}
+                            field="files_ready"
+                            initialValue={item.files_ready}
+                            onUpdate={() => refetchLineup()}
+                          />
+                        </td>
+                        <td className="p-4 text-center">
+                          <EditableStatusCell
+                            lineupItemId={item.id}
+                            field="is_designed"
+                            initialValue={item.is_designed}
+                            onUpdate={() => refetchLineup()}
+                          />
                         </td>
                         {canManageReminders && (
                           <td className="p-4">

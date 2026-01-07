@@ -24,14 +24,16 @@ const roleLabels: Record<string, string> = {
   admin: "מנהל",
   editor: "עורך",
   designer: "מעצב",
-  publisher: "הוצאה לאור"
+  publisher: "צוות הוצאת לאור",
+  social: "צוות סושיאל/דיגיטל"
 };
 
 const roleColors: Record<string, string> = {
   admin: "bg-red-500/20 text-red-400 border-red-500/30",
   editor: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   designer: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  publisher: "bg-green-500/20 text-green-400 border-green-500/30"
+  publisher: "bg-green-500/20 text-green-400 border-green-500/30",
+  social: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
 };
 
 export default function Team() {
@@ -157,7 +159,8 @@ export default function Team() {
                         <SelectItem value="admin">מנהל</SelectItem>
                         <SelectItem value="editor">עורך</SelectItem>
                         <SelectItem value="designer">מעצב</SelectItem>
-                        <SelectItem value="publisher">הוצאה לאור</SelectItem>
+                        <SelectItem value="publisher">צוות הוצאת לאור</SelectItem>
+                        <SelectItem value="social">צוות סושיאל/דיגיטל</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
