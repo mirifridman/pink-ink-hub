@@ -97,7 +97,7 @@ export const ROLE_LABELS: Record<string, string> = {
   admin: "מנהל",
   editor: "עורך",
   designer: "מעצב",
-  publisher: "מפיץ",
+  publisher: "צוות הוצאה לאור",
 };
 
 export function useRolePermissions() {
