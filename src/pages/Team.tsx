@@ -3,10 +3,15 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { NeonCard, NeonCardContent } from "@/components/ui/NeonCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, User, Mail, Phone, MessageCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Search, User, Mail, MessageCircle, UserPlus } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TeamMember {
   id: string;
@@ -31,6 +36,12 @@ const roleColors: Record<string, string> = {
 
 export default function Team() {
   const [search, setSearch] = useState("");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newMember, setNewMember] = useState({ email: "", full_name: "", role: "" });
+  const { user, hasPermission } = useAuth();
+  const queryClient = useQueryClient();
+
+  const canManageTeam = hasPermission(["admin"]);
 
   const { data: teamMembers = [], isLoading } = useQuery({
     queryKey: ["team-members"],
@@ -69,12 +80,94 @@ export default function Team() {
     roleLabels[member.role]?.includes(search)
   );
 
+  const inviteMutation = useMutation({
+    mutationFn: async (data: { email: string; full_name: string; role: string }) => {
+      const { error } = await supabase.from("user_invitations").insert({
+        email: data.email,
+        full_name: data.full_name,
+        role: data.role,
+        invited_by: user?.id || "",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("ההזמנה נשלחה בהצלחה");
+      setIsAddOpen(false);
+      setNewMember({ email: "", full_name: "", role: "" });
+      queryClient.invalidateQueries({ queryKey: ["team-members"] });
+    },
+    onError: (error: any) => {
+      toast.error("שגיאה בשליחת ההזמנה: " + error.message);
+    },
+  });
+
+  const handleInvite = () => {
+    if (!newMember.email || !newMember.role) {
+      toast.error("יש למלא אימייל ותפקיד");
+      return;
+    }
+    inviteMutation.mutate(newMember);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-rubik font-bold text-foreground">אנשי צוות</h1>
-          <p className="text-muted-foreground mt-1">רשימת אנשי הצוות במערכת</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-rubik font-bold text-foreground">אנשי צוות</h1>
+            <p className="text-muted-foreground mt-1">רשימת אנשי הצוות במערכת</p>
+          </div>
+          {canManageTeam && (
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  הוספת איש צוות
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>הזמנת איש צוות חדש</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>שם מלא</Label>
+                    <Input
+                      value={newMember.full_name}
+                      onChange={(e) => setNewMember({ ...newMember, full_name: e.target.value })}
+                      placeholder="שם מלא"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>אימייל *</Label>
+                    <Input
+                      type="email"
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>תפקיד *</Label>
+                    <Select value={newMember.role} onValueChange={(v) => setNewMember({ ...newMember, role: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר תפקיד" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">מנהל</SelectItem>
+                        <SelectItem value="editor">עורך</SelectItem>
+                        <SelectItem value="designer">מעצב</SelectItem>
+                        <SelectItem value="publisher">הוצאה לאור</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleInvite} disabled={inviteMutation.isPending} className="w-full">
+                    {inviteMutation.isPending ? "שולח..." : "שלח הזמנה"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Search */}
