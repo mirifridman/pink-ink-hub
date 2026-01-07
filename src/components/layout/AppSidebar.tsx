@@ -8,7 +8,8 @@ import {
   Sparkles,
   MessageSquare,
   Settings,
-  UserCog
+  UserCog,
+  Shield
 } from "lucide-react";
 import { UserMenu } from "./UserMenu";
 import { NavLink, useLocation } from "react-router-dom";
@@ -37,6 +38,7 @@ const menuItems: MenuItem[] = [
   { icon: Calendar, label: "לוח רבעוני", path: "/schedule", roles: ["admin", "editor", "designer", "publisher"] },
   { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", roles: ["admin", "editor", "designer", "publisher"], badgeKey: "notifications" },
   { icon: UserCog, label: "ניהול משתמשים", path: "/users", roles: ["admin"] },
+  { icon: Shield, label: "ניהול הרשאות", path: "/permissions", roles: ["admin"] },
   { icon: Settings, label: "הגדרות", path: "/settings", roles: ["admin"] },
 ];
 
