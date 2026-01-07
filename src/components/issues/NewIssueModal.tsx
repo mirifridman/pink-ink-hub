@@ -12,7 +12,7 @@ import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useMagazines, useLatestIssueNumber, useIssues, useEditors } from "@/hooks/useIssues";
+import { useMagazines, useLatestIssueNumber, useIssues, useEditors, useActivePageTemplates } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,7 +24,7 @@ interface NewIssueModalProps {
 
 export interface NewIssueData {
   magazine_id: string;
-  template_pages: 52 | 68;
+  template_pages: number;
   issue_number: number;
   distribution_month: Date;
   theme: string;
@@ -40,9 +40,10 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
   const { data: magazines, isLoading: magazinesLoading } = useMagazines();
   const { data: issues } = useIssues();
   const { data: editors } = useEditors();
+  const { data: pageTemplates } = useActivePageTemplates();
   
   const [magazineId, setMagazineId] = useState<string>("");
-  const [templatePages, setTemplatePages] = useState<"52" | "68">("52");
+  const [templatePages, setTemplatePages] = useState<string>("");
   const [issueNumber, setIssueNumber] = useState<number>(1);
   const [distributionMonth, setDistributionMonth] = useState<Date>();
   const [theme, setTheme] = useState("");
@@ -52,6 +53,13 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
   const [copyLineup, setCopyLineup] = useState(false);
   const [sourceIssueId, setSourceIssueId] = useState<string>("");
   const [selectedEditorIds, setSelectedEditorIds] = useState<string[]>([]);
+
+  // Set default template when templates load
+  useEffect(() => {
+    if (pageTemplates?.length && !templatePages) {
+      setTemplatePages(pageTemplates[0].page_count.toString());
+    }
+  }, [pageTemplates, templatePages]);
 
   const { data: latestNumber } = useLatestIssueNumber(magazineId);
 
@@ -64,7 +72,7 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
   const magazineIssues = issues?.filter(i => i.magazine_id === magazineId) || [];
 
   const isValid = () => {
-    if (!magazineId || !distributionMonth || !theme || !designStartDate || !sketchCloseDate || !printDate) {
+    if (!magazineId || !templatePages || !distributionMonth || !theme || !designStartDate || !sketchCloseDate || !printDate) {
       return false;
     }
     if (sketchCloseDate <= designStartDate) return false;
@@ -77,7 +85,7 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
     
     onContinue({
       magazine_id: magazineId,
-      template_pages: parseInt(templatePages) as 52 | 68,
+      template_pages: parseInt(templatePages),
       issue_number: issueNumber,
       distribution_month: distributionMonth!,
       theme,
@@ -101,7 +109,7 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
 
   const resetForm = () => {
     setMagazineId("");
-    setTemplatePages("52");
+    setTemplatePages(pageTemplates?.[0]?.page_count.toString() || "");
     setIssueNumber(1);
     setDistributionMonth(undefined);
     setTheme("");
@@ -147,16 +155,16 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
           <div className="space-y-2">
             <Label>תבנית עמודים *</Label>
             <p className="text-xs text-muted-foreground">לא ניתן לשנות לאחר יצירה!</p>
-            <RadioGroup value={templatePages} onValueChange={(v) => setTemplatePages(v as "52" | "68")}>
-              <div className="flex gap-6">
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="52" id="pages-52" />
-                  <Label htmlFor="pages-52" className="cursor-pointer">52 עמודים</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="68" id="pages-68" />
-                  <Label htmlFor="pages-68" className="cursor-pointer">68 עמודים</Label>
-                </div>
+            <RadioGroup value={templatePages} onValueChange={setTemplatePages}>
+              <div className="flex flex-wrap gap-4">
+                {pageTemplates?.map((template) => (
+                  <div key={template.id} className="flex items-center gap-2">
+                    <RadioGroupItem value={template.page_count.toString()} id={`pages-${template.page_count}`} />
+                    <Label htmlFor={`pages-${template.page_count}`} className="cursor-pointer">
+                      {template.page_count} עמודים
+                    </Label>
+                  </div>
+                ))}
               </div>
             </RadioGroup>
           </div>
