@@ -90,6 +90,9 @@ export type Database = {
       }
       inserts: {
         Row: {
+          assignment_sent: boolean | null
+          assignment_sent_by: string | null
+          assignment_sent_date: string | null
           created_at: string
           description: string | null
           designer_notes: string | null
@@ -105,6 +108,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assignment_sent?: boolean | null
+          assignment_sent_by?: string | null
+          assignment_sent_date?: string | null
           created_at?: string
           description?: string | null
           designer_notes?: string | null
@@ -120,6 +126,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assignment_sent?: boolean | null
+          assignment_sent_by?: string | null
+          assignment_sent_date?: string | null
           created_at?: string
           description?: string | null
           designer_notes?: string | null
@@ -288,6 +297,9 @@ export type Database = {
       }
       lineup_items: {
         Row: {
+          assignment_sent: boolean | null
+          assignment_sent_by: string | null
+          assignment_sent_date: string | null
           content: string
           created_at: string
           designer_notes: string | null
@@ -305,6 +317,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assignment_sent?: boolean | null
+          assignment_sent_by?: string | null
+          assignment_sent_date?: string | null
           content: string
           created_at?: string
           designer_notes?: string | null
@@ -322,6 +337,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assignment_sent?: boolean | null
+          assignment_sent_by?: string | null
+          assignment_sent_date?: string | null
           content?: string
           created_at?: string
           designer_notes?: string | null
@@ -466,6 +484,8 @@ export type Database = {
       }
       reminders: {
         Row: {
+          content_received: boolean | null
+          content_received_date: string | null
           created_at: string
           created_by: string
           id: string
@@ -473,6 +493,7 @@ export type Database = {
           issue_id: string
           lineup_item_id: string | null
           message: string
+          reminder_count: number | null
           scheduled_for: string
           sent_at: string | null
           sent_by: string | null
@@ -481,6 +502,8 @@ export type Database = {
           type: string
         }
         Insert: {
+          content_received?: boolean | null
+          content_received_date?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -488,6 +511,7 @@ export type Database = {
           issue_id: string
           lineup_item_id?: string | null
           message: string
+          reminder_count?: number | null
           scheduled_for: string
           sent_at?: string | null
           sent_by?: string | null
@@ -496,6 +520,8 @@ export type Database = {
           type: string
         }
         Update: {
+          content_received?: boolean | null
+          content_received_date?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -503,6 +529,7 @@ export type Database = {
           issue_id?: string
           lineup_item_id?: string | null
           message?: string
+          reminder_count?: number | null
           scheduled_for?: string
           sent_at?: string | null
           sent_by?: string | null

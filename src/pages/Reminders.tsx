@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/ui/NeonCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -15,12 +15,19 @@ import {
   AlertCircle,
   Send,
   History,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  FileCheck,
+  User,
+  Phone,
+  Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   useReminders, 
   useUpdateReminderStatus, 
@@ -57,21 +64,32 @@ const getTypeLabel = (type: string) => {
   }
 };
 
+const getDaysUntilDeadline = (designStartDate: string | undefined) => {
+  if (!designStartDate) return 999;
+  return differenceInDays(new Date(designStartDate), new Date());
+};
+
 export default function Reminders() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: allReminders, isLoading } = useReminders();
   const { data: settings, isLoading: settingsLoading } = useReminderSettings();
   const updateStatus = useUpdateReminderStatus();
   const updateSettings = useUpdateReminderSettings();
 
+  // Filter by assignment type and content status
+  const assignmentReminders = allReminders?.filter(r => r.type === "assignment" && r.status === "sent") || [];
+  const pendingContentReminders = assignmentReminders.filter(r => !r.content_received);
+  const receivedContentReminders = assignmentReminders.filter(r => r.content_received);
+  
+  // Urgent = deadline within 2 days and content not received
+  const urgentReminders = pendingContentReminders.filter(r => {
+    const daysLeft = getDaysUntilDeadline(r.issue?.design_start_date);
+    return daysLeft <= 2;
+  });
+
+  // Pending general reminders (not assignments)
   const pendingReminders = allReminders?.filter(r => r.status === "pending") || [];
-  const sentTodayReminders = allReminders?.filter(r => {
-    if (r.status !== "sent" || !r.sent_at) return false;
-    const sentDate = new Date(r.sent_at);
-    const today = new Date();
-    return sentDate.toDateString() === today.toDateString();
-  }) || [];
-  const historyReminders = allReminders?.filter(r => r.status === "sent") || [];
 
   const openWhatsApp = (phone: string | null | undefined, message: string) => {
     if (!phone) {
@@ -87,6 +105,67 @@ export default function Reminders() {
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
     window.open(url, '_blank');
+  };
+
+  const confirmContentReceived = useMutation({
+    mutationFn: async (reminderId: string) => {
+      const { error } = await supabase
+        .from("reminders")
+        .update({
+          content_received: true,
+          content_received_date: new Date().toISOString(),
+        })
+        .eq("id", reminderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reminders"] });
+      toast({
+        title: "עודכן בהצלחה! ✅",
+        description: "התוכן סומן כהתקבל",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את הסטטוס",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendManualReminder = async (reminder: Reminder) => {
+    const daysLeft = getDaysUntilDeadline(reminder.issue?.design_start_date);
+    const deadline = reminder.issue?.design_start_date 
+      ? format(new Date(reminder.issue.design_start_date), "dd/MM/yyyy", { locale: he })
+      : "לא נקבע";
+    
+    const message = `היי ${reminder.supplier?.name} 👋
+
+אני רואה שעדיין לא שלחת את "${reminder.lineup_item?.content}"
+
+${daysLeft <= 0 ? "הדדליין עבר! 😬" : daysLeft === 1 ? "נשאר לך יום אחד! ⏰" : `נשארו לך ${daysLeft} ימים! 🕐`}
+
+📅 דדליין: ${deadline}
+
+בבקשה אל תאכזב אותנו 🙏`;
+
+    // Update reminder count
+    await supabase
+      .from("reminders")
+      .update({
+        reminder_count: (reminder.reminder_count || 0) + 1,
+      })
+      .eq("id", reminder.id);
+
+    openWhatsApp(reminder.supplier?.phone, message);
+    queryClient.invalidateQueries({ queryKey: ["reminders"] });
+
+    toast({
+      title: "תזכורת נשלחה",
+      description: `תזכורת נשלחה ל${reminder.supplier?.name}`,
+    });
   };
 
   const handleSend = async (reminder: Reminder) => {
@@ -129,7 +208,118 @@ export default function Reminders() {
     }
   };
 
-  const ReminderCard = ({ reminder, showActions = true }: { reminder: Reminder; showActions?: boolean }) => (
+  // Assignment card with content tracking
+  const AssignmentCard = ({ reminder, showContentActions = true }: { reminder: Reminder; showContentActions?: boolean }) => {
+    const daysLeft = getDaysUntilDeadline(reminder.issue?.design_start_date);
+    const isUrgent = daysLeft <= 2 && !reminder.content_received;
+    const isOverdue = daysLeft < 0 && !reminder.content_received;
+
+    return (
+      <NeonCard
+        variant={isOverdue ? "status" : isUrgent ? "status" : "default"}
+        status={isOverdue ? "critical" : isUrgent ? "urgent" : undefined}
+      >
+        <NeonCardContent className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0 space-y-3">
+              {/* Header */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <h3 className="font-bold text-lg">{reminder.lineup_item?.content || "פריט לא ידוע"}</h3>
+                {reminder.content_received ? (
+                  <StatusBadge status="success">
+                    <CheckCircle2 className="w-3 h-3 ml-1" />
+                    התקבל
+                  </StatusBadge>
+                ) : isOverdue ? (
+                  <StatusBadge status="critical" pulse>באיחור!</StatusBadge>
+                ) : isUrgent ? (
+                  <StatusBadge status="urgent" pulse>דחוף</StatusBadge>
+                ) : (
+                  <StatusBadge status="waiting">ממתין לתוכן</StatusBadge>
+                )}
+              </div>
+
+              {/* Details */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  <span>{reminder.supplier?.name || "ספק לא ידוע"}</span>
+                </div>
+                {reminder.supplier?.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    <span dir="ltr">{reminder.supplier.phone}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    {reminder.issue?.design_start_date 
+                      ? format(new Date(reminder.issue.design_start_date), "dd/MM/yyyy", { locale: he })
+                      : "לא נקבע"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileCheck className="w-4 h-4" />
+                  <span>
+                    עמודים {reminder.lineup_item?.page_start === reminder.lineup_item?.page_end 
+                      ? reminder.lineup_item?.page_start 
+                      : `${reminder.lineup_item?.page_start}-${reminder.lineup_item?.page_end}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Issue info */}
+              <p className="text-xs text-muted-foreground">
+                {reminder.issue?.magazine?.name} - גליון {reminder.issue?.issue_number} ({reminder.issue?.theme})
+              </p>
+
+              {/* Reminder count */}
+              {(reminder.reminder_count || 0) > 0 && (
+                <p className="text-xs text-orange-600">
+                  ⏰ נשלחו {reminder.reminder_count} תזכורות
+                </p>
+              )}
+
+              {/* Received date */}
+              {reminder.content_received && reminder.content_received_date && (
+                <p className="text-xs text-emerald-600">
+                  ✅ התקבל ב-{format(new Date(reminder.content_received_date), "dd/MM/yyyy HH:mm", { locale: he })}
+                </p>
+              )}
+            </div>
+
+            {/* Actions */}
+            {showContentActions && !reminder.content_received && (
+              <div className="flex flex-col gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  className="gradient-neon text-white gap-2"
+                  onClick={() => confirmContentReceived.mutate(reminder.id)}
+                  disabled={confirmContentReceived.isPending}
+                >
+                  <Check className="w-4 h-4" />
+                  אישור קבלת תוכן
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => sendManualReminder(reminder)}
+                >
+                  <Send className="w-4 h-4" />
+                  שליחת תזכורת
+                </Button>
+              </div>
+            )}
+          </div>
+        </NeonCardContent>
+      </NeonCard>
+    );
+  };
+
+  // Pending reminder card (for scheduled reminders)
+  const PendingReminderCard = ({ reminder }: { reminder: Reminder }) => (
     <NeonCard
       variant={reminder.type === "reminder_urgent" ? "status" : "default"}
       status={reminder.type === "reminder_urgent" ? "critical" : reminder.type === "reminder_2days" ? "urgent" : undefined}
@@ -157,32 +347,26 @@ export default function Reminders() {
             {reminder.supplier?.phone && (
               <MessageCircle className="w-4 h-4 text-muted-foreground" />
             )}
-            {showActions ? (
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                  onClick={() => handleCancel(reminder.id)}
-                  disabled={updateStatus.isPending}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="gradient-neon text-white gap-2"
-                  onClick={() => handleSend(reminder)}
-                  disabled={updateStatus.isPending}
-                >
-                  <Send className="w-4 h-4" />
-                  שלח עכשיו
-                </Button>
-              </div>
-            ) : (
-              <span className="text-sm text-muted-foreground">
-                {reminder.sent_at && format(new Date(reminder.sent_at), "dd/MM/yyyy HH:mm", { locale: he })}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onClick={() => handleCancel(reminder.id)}
+                disabled={updateStatus.isPending}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              <Button 
+                size="sm" 
+                className="gradient-neon text-white gap-2"
+                onClick={() => handleSend(reminder)}
+                disabled={updateStatus.isPending}
+              >
+                <Send className="w-4 h-4" />
+                שלח עכשיו
+              </Button>
+            </div>
           </div>
         </div>
       </NeonCardContent>
@@ -197,30 +381,102 @@ export default function Reminders() {
           <div>
             <h1 className="text-3xl font-rubik font-bold text-foreground flex items-center gap-3">
               <Bell className="w-8 h-8 text-accent" />
-              תזכורות
+              תזכורות והקצאות
             </h1>
-            <p className="text-muted-foreground mt-1">ניהול תזכורות אוטומטיות לספקים</p>
+            <p className="text-muted-foreground mt-1">ניהול הקצאות לספקים ומעקב אחר קבלת תוכן</p>
           </div>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              ממתינות לשליחה ({pendingReminders.length})
+              ממתינים לתוכן ({pendingContentReminders.length})
             </TabsTrigger>
-            <TabsTrigger value="today" className="flex items-center gap-2">
-              <Send className="w-4 h-4" />
-              נשלחו היום ({sentTodayReminders.length})
+            <TabsTrigger value="urgent" className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              דחוף ({urgentReminders.length})
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <History className="w-4 h-4" />
-              היסטוריה ({historyReminders.length})
+            <TabsTrigger value="received" className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              התקבל תוכן ({receivedContentReminders.length})
+            </TabsTrigger>
+            <TabsTrigger value="scheduled" className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              תזכורות ממתינות ({pendingReminders.length})
             </TabsTrigger>
           </TabsList>
 
+          {/* Pending Content Tab */}
           <TabsContent value="pending">
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : pendingContentReminders.length === 0 ? (
+              <NeonCard>
+                <NeonCardContent className="py-12 text-center text-muted-foreground">
+                  <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>אין הקצאות ממתינות לתוכן</p>
+                </NeonCardContent>
+              </NeonCard>
+            ) : (
+              <div className="space-y-4">
+                {pendingContentReminders.map(reminder => (
+                  <AssignmentCard key={reminder.id} reminder={reminder} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Urgent Tab */}
+          <TabsContent value="urgent">
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : urgentReminders.length === 0 ? (
+              <NeonCard>
+                <NeonCardContent className="py-12 text-center text-muted-foreground">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>אין פריטים דחופים</p>
+                  <p className="text-sm mt-1">פריטים עם פחות מיומיים לדדליין יופיעו כאן</p>
+                </NeonCardContent>
+              </NeonCard>
+            ) : (
+              <div className="space-y-4">
+                {urgentReminders.map(reminder => (
+                  <AssignmentCard key={reminder.id} reminder={reminder} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Received Content Tab */}
+          <TabsContent value="received">
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : receivedContentReminders.length === 0 ? (
+              <NeonCard>
+                <NeonCardContent className="py-12 text-center text-muted-foreground">
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>אין תוכן שהתקבל</p>
+                </NeonCardContent>
+              </NeonCard>
+            ) : (
+              <div className="space-y-4">
+                {receivedContentReminders.map(reminder => (
+                  <AssignmentCard key={reminder.id} reminder={reminder} showContentActions={false} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Scheduled Reminders Tab */}
+          <TabsContent value="scheduled">
             {isLoading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -229,7 +485,7 @@ export default function Reminders() {
               <NeonCard>
                 <NeonCardContent className="py-12 text-center text-muted-foreground">
                   <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>אין תזכורות ממתינות</p>
+                  <p>אין תזכורות ממתינות לשליחה</p>
                 </NeonCardContent>
               </NeonCard>
             ) : (
@@ -243,7 +499,7 @@ export default function Reminders() {
                     </h3>
                     <div className="space-y-3">
                       {pendingReminders.filter(r => r.type === "reminder_urgent").map(reminder => (
-                        <ReminderCard key={reminder.id} reminder={reminder} />
+                        <PendingReminderCard key={reminder.id} reminder={reminder} />
                       ))}
                     </div>
                   </div>
@@ -256,7 +512,7 @@ export default function Reminders() {
                     </h3>
                     <div className="space-y-3">
                       {pendingReminders.filter(r => r.type === "reminder_2days").map(reminder => (
-                        <ReminderCard key={reminder.id} reminder={reminder} />
+                        <PendingReminderCard key={reminder.id} reminder={reminder} />
                       ))}
                     </div>
                   </div>
@@ -269,53 +525,11 @@ export default function Reminders() {
                     </h3>
                     <div className="space-y-3">
                       {pendingReminders.filter(r => !["reminder_urgent", "reminder_2days"].includes(r.type)).map(reminder => (
-                        <ReminderCard key={reminder.id} reminder={reminder} />
+                        <PendingReminderCard key={reminder.id} reminder={reminder} />
                       ))}
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="today">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : sentTodayReminders.length === 0 ? (
-              <NeonCard>
-                <NeonCardContent className="py-12 text-center text-muted-foreground">
-                  <Send className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>לא נשלחו תזכורות היום</p>
-                </NeonCardContent>
-              </NeonCard>
-            ) : (
-              <div className="space-y-3">
-                {sentTodayReminders.map(reminder => (
-                  <ReminderCard key={reminder.id} reminder={reminder} showActions={false} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="history">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : historyReminders.length === 0 ? (
-              <NeonCard>
-                <NeonCardContent className="py-12 text-center text-muted-foreground">
-                  <History className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>אין היסטוריית תזכורות</p>
-                </NeonCardContent>
-              </NeonCard>
-            ) : (
-              <div className="space-y-3">
-                {historyReminders.map(reminder => (
-                  <ReminderCard key={reminder.id} reminder={reminder} showActions={false} />
-                ))}
               </div>
             )}
           </TabsContent>

@@ -16,6 +16,9 @@ export interface Reminder {
   sent_by: string | null;
   created_at: string;
   created_by: string;
+  content_received?: boolean;
+  content_received_date?: string | null;
+  reminder_count?: number;
   supplier?: {
     id: string;
     name: string;
@@ -31,6 +34,7 @@ export interface Reminder {
     id: string;
     issue_number: number;
     theme: string;
+    design_start_date?: string;
     magazine?: {
       name: string;
     };
@@ -71,7 +75,7 @@ export function useReminders(status?: 'pending' | 'sent' | 'cancelled') {
           *,
           supplier:suppliers(id, name, phone),
           lineup_item:lineup_items(id, content, page_start, page_end),
-          issue:issues(id, issue_number, theme, magazine:magazines(name))
+          issue:issues(id, issue_number, theme, design_start_date, magazine:magazines(name))
         `)
         .order("scheduled_for", { ascending: true });
 
