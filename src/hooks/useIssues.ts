@@ -600,7 +600,7 @@ interface UserWithRole {
   id: string;
   full_name: string | null;
   email: string | null;
-  role: "admin" | "designer" | "editor" | "publisher";
+  role: "admin" | "designer" | "editor" | "publisher" | "social";
 }
 
 export function useAllUsersWithRoles() {
@@ -641,7 +641,7 @@ export function useAssignRole() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "designer" | "editor" | "publisher" }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "designer" | "editor" | "publisher" | "social" }) => {
       // First delete existing role if any
       await supabase
         .from("user_roles")
@@ -733,7 +733,7 @@ interface UserInvitation {
   id: string;
   email: string;
   full_name: string | null;
-  role: "admin" | "designer" | "editor" | "publisher";
+  role: "admin" | "designer" | "editor" | "publisher" | "social";
   invited_by: string;
   created_at: string;
   expires_at: string;

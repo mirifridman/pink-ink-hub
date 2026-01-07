@@ -209,6 +209,7 @@ export type Database = {
           created_by: string
           design_start_date: string
           distribution_month: string
+          hebrew_month: string | null
           id: string
           issue_number: number
           magazine_id: string
@@ -224,6 +225,7 @@ export type Database = {
           created_by: string
           design_start_date: string
           distribution_month: string
+          hebrew_month?: string | null
           id?: string
           issue_number: number
           magazine_id: string
@@ -239,6 +241,7 @@ export type Database = {
           created_by?: string
           design_start_date?: string
           distribution_month?: string
+          hebrew_month?: string | null
           id?: string
           issue_number?: number
           magazine_id?: string
@@ -255,6 +258,51 @@ export type Database = {
             columns: ["magazine_id"]
             isOneToOne: false
             referencedRelation: "magazines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lineup_comments: {
+        Row: {
+          comment_text: string
+          created_at: string
+          id: string
+          lineup_item_id: string
+          updated_at: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string
+          id?: string
+          lineup_item_id: string
+          updated_at?: string
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string
+          id?: string
+          lineup_item_id?: string
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineup_comments_lineup_item_id_fkey"
+            columns: ["lineup_item_id"]
+            isOneToOne: false
+            referencedRelation: "lineup_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineup_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -770,7 +818,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "designer" | "editor" | "publisher"
+      app_role: "admin" | "designer" | "editor" | "publisher" | "social"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -898,7 +946,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "designer", "editor", "publisher"],
+      app_role: ["admin", "designer", "editor", "publisher", "social"],
     },
   },
 } as const

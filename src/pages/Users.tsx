@@ -57,13 +57,14 @@ import { formatDistanceToNow, format } from "date-fns";
 import { he } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-type AppRole = "admin" | "designer" | "editor" | "publisher";
+type AppRole = "admin" | "designer" | "editor" | "publisher" | "social";
 
 const roleLabels: Record<string, string> = {
   admin: "מנהל",
   designer: "מעצב",
   editor: "עורך",
-  publisher: "מפיץ",
+  publisher: "צוות הוצאת לאור",
+  social: "צוות סושיאל/דיגיטל",
 };
 
 const roleIcons: Record<string, typeof Shield> = {
@@ -71,6 +72,7 @@ const roleIcons: Record<string, typeof Shield> = {
   designer: Palette,
   editor: Edit3,
   publisher: Send,
+  social: MessageCircle,
 };
 
 const roleColors: Record<string, string> = {
@@ -78,6 +80,7 @@ const roleColors: Record<string, string> = {
   designer: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
   editor: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   publisher: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  social: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
 };
 
 export default function UsersPage() {
@@ -125,6 +128,7 @@ export default function UsersPage() {
     editor: filteredUsers.filter(u => u.role === "editor"),
     designer: filteredUsers.filter(u => u.role === "designer"),
     publisher: filteredUsers.filter(u => u.role === "publisher"),
+    social: filteredUsers.filter(u => u.role === "social"),
   };
 
   const handleAddUser = async () => {
@@ -314,7 +318,12 @@ export default function UsersPage() {
               </SelectItem>
               <SelectItem value="publisher">
                 <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4" /> מפיץ
+                  <Send className="w-4 h-4" /> צוות הוצאת לאור
+                </div>
+              </SelectItem>
+              <SelectItem value="social">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" /> צוות סושיאל/דיגיטל
                 </div>
               </SelectItem>
               <SelectItem value="admin">
@@ -406,7 +415,12 @@ export default function UsersPage() {
               </SelectItem>
               <SelectItem value="publisher">
                 <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4" /> מפיץ
+                  <Send className="w-4 h-4" /> צוות הוצאת לאור
+                </div>
+              </SelectItem>
+              <SelectItem value="social">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" /> צוות סושיאל/דיגיטל
                 </div>
               </SelectItem>
               <SelectItem value="admin">
@@ -450,7 +464,7 @@ export default function UsersPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {(["admin", "editor", "designer", "publisher"] as const).map(role => {
+          {(["admin", "editor", "designer", "publisher", "social"] as const).map(role => {
             const RoleIcon = roleIcons[role];
             const count = usersWithRoles?.filter(u => u.role === role).length || 0;
             return (
