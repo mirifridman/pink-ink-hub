@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, GripVertical, ArrowUpDown } from "lucide-react";
 import { PagePickerModal } from "./PagePickerModal";
 import { MultiSupplierSelect } from "./MultiSupplierSelect";
 import { EditorSelect } from "./EditorSelect";
@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +91,9 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const [showExitDialog, setShowExitDialog] = useState(false);
   const hasChangesRef = useRef(false);
   const pendingNavigationRef = useRef<(() => void) | null>(null);
+  const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Load existing lineup items if editing a draft
@@ -207,6 +211,64 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
 
   const deleteRow = (id: string) => {
     setLineupRows(rows => rows.filter(row => row.id !== id));
+  };
+
+  const moveRow = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setLineupRows(rows => {
+      const newRows = [...rows];
+      const [removed] = newRows.splice(fromIndex, 1);
+      newRows.splice(toIndex, 0, removed);
+      return newRows;
+    });
+  };
+
+  const swapRowPages = (id1: string, id2: string) => {
+    setLineupRows(rows => {
+      const row1 = rows.find(r => r.id === id1);
+      const row2 = rows.find(r => r.id === id2);
+      if (!row1 || !row2) return rows;
+      
+      return rows.map(row => {
+        if (row.id === id1) return { ...row, pages: row2.pages };
+        if (row.id === id2) return { ...row, pages: row1.pages };
+        return row;
+      });
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedRowId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedRowId || draggedRowId === targetId) {
+      setDraggedRowId(null);
+      return;
+    }
+    
+    const fromIndex = lineupRows.findIndex(r => r.id === draggedRowId);
+    const toIndex = lineupRows.findIndex(r => r.id === targetId);
+    moveRow(fromIndex, toIndex);
+    setDraggedRowId(null);
+  };
+
+  const handleSwapClick = (id: string) => {
+    if (!swapSourceId) {
+      setSwapSourceId(id);
+    } else if (swapSourceId === id) {
+      setSwapSourceId(null);
+    } else {
+      swapRowPages(swapSourceId, id);
+      setSwapSourceId(null);
+    }
   };
 
   const addInsertRow = () => {
@@ -543,9 +605,15 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
 
       {/* Lineup Table */}
       <div className="border rounded-lg overflow-hidden">
+        {swapSourceId && (
+          <div className="p-2 bg-primary/10 text-primary text-sm text-center border-b">
+            בחר פריט נוסף להחלפת עמודים (או לחץ שוב לביטול)
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10"></TableHead>
               <TableHead className="text-right w-24">עמוד</TableHead>
               <TableHead className="text-right">תוכן</TableHead>
               <TableHead className="text-right w-40">ספק</TableHead>
@@ -554,12 +622,40 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               {assignedEditors.length > 0 && (
                 <TableHead className="text-right w-36">עורך אחראי</TableHead>
               )}
-              <TableHead className="w-12"></TableHead>
+              <TableHead className="w-20"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {lineupRows.map((row) => (
-              <TableRow key={row.id}>
+            {lineupRows.map((row, index) => (
+              <TableRow 
+                key={row.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, row.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, row.id)}
+                className={cn(
+                  "cursor-move",
+                  draggedRowId === row.id && "opacity-50",
+                  swapSourceId === row.id && "bg-primary/10 ring-2 ring-primary"
+                )}
+              >
+                <TableCell className="p-1">
+                  <div className="flex flex-col items-center gap-1">
+                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-6 w-6",
+                        swapSourceId === row.id && "bg-primary text-primary-foreground"
+                      )}
+                      onClick={() => handleSwapClick(row.id)}
+                      title="החלף עמודים עם פריט אחר"
+                    >
+                      <ArrowUpDown className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
