@@ -10,12 +10,13 @@ import {
   useAllProfiles,
   useAssignRole,
   useRemoveRole,
-  useUserInvitations
+  useUserInvitations,
+  usePendingUsers
 } from "@/hooks/useIssues";
 import { 
   Plus, Trash2, Users, UserPlus, Clock, Search, 
   Copy, MessageCircle, Link2, CheckCircle, X, RefreshCw,
-  Shield, Palette, Edit3, Send
+  Shield, Palette, Edit3, Send, UserCheck, Hourglass
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +100,7 @@ export default function UsersPage() {
   const { data: usersWithRoles, isLoading: isLoadingUsers } = useAllUsersWithRoles();
   const { data: allProfiles } = useAllProfiles();
   const { data: invitations, isLoading: isLoadingInvitations } = useUserInvitations();
+  const { data: pendingUsers, isLoading: isLoadingPending } = usePendingUsers();
   
   const assignRole = useAssignRole();
   const removeRole = useRemoveRole();
@@ -349,6 +351,81 @@ export default function UsersPage() {
     );
   };
 
+  const PendingUserCard = ({ user }: { user: { id: string; full_name: string | null; email: string | null; created_at: string } }) => {
+    const [selectedPendingRole, setSelectedPendingRole] = useState<AppRole>("editor");
+    const [isApproving, setIsApproving] = useState(false);
+
+    const handleApprove = async () => {
+      setIsApproving(true);
+      try {
+        await assignRole.mutateAsync({ userId: user.id, role: selectedPendingRole });
+        queryClient.invalidateQueries({ queryKey: ["pendingUsers"] });
+        toast.success(`${user.full_name || user.email} אושר כ${roleLabels[selectedPendingRole]}`);
+      } catch (error) {
+        toast.error("שגיאה באישור המשתמש");
+      } finally {
+        setIsApproving(false);
+      }
+    };
+
+    return (
+      <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center text-blue-800 dark:text-blue-200 font-bold text-lg">
+            {user.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "?"}
+          </div>
+          <div>
+            <p className="font-medium text-foreground">{user.full_name || "משתמש ללא שם"}</p>
+            <p className="text-sm text-muted-foreground">{user.email}</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              נרשם {formatDistanceToNow(new Date(user.created_at), { locale: he, addSuffix: true })}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Select value={selectedPendingRole} onValueChange={(v) => setSelectedPendingRole(v as AppRole)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="editor">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-4 h-4" /> עורך
+                </div>
+              </SelectItem>
+              <SelectItem value="designer">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4" /> מעצב
+                </div>
+              </SelectItem>
+              <SelectItem value="publisher">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4" /> מפיץ
+                </div>
+              </SelectItem>
+              <SelectItem value="admin">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> מנהל
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button 
+            onClick={handleApprove}
+            disabled={isApproving}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <UserCheck className="w-4 h-4 ml-2" />
+            {isApproving ? "מאשר..." : "אשר"}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6" dir="rtl">
@@ -438,8 +515,17 @@ export default function UsersPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue="pending" className="w-full">
           <TabsList>
+            <TabsTrigger value="pending" className="flex items-center gap-2">
+              <Hourglass className="w-4 h-4" />
+              ממתינים לאישור
+              {pendingUsers && pendingUsers.length > 0 && (
+                <Badge variant="destructive" className="mr-1">
+                  {pendingUsers.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               משתמשים פעילים ({usersWithRoles?.length || 0})
@@ -454,6 +540,24 @@ export default function UsersPage() {
               )}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="pending" className="mt-6">
+            {isLoadingPending ? (
+              <div className="text-center py-12 text-muted-foreground">טוען בקשות...</div>
+            ) : !pendingUsers || pendingUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <UserCheck className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground">אין משתמשים ממתינים לאישור</p>
+                <p className="text-sm text-muted-foreground mt-2">כל המשתמשים שנרשמו כבר קיבלו תפקיד</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingUsers.map((user) => (
+                  <PendingUserCard key={user.id} user={user} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="users" className="mt-6">
             {isLoadingUsers ? (

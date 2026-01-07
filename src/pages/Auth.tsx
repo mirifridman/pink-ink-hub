@@ -142,7 +142,7 @@ export default function Auth() {
             title: "נרשמת בהצלחה!",
             description: invitationInfo 
               ? `ברוך הבא למערכת! התפקיד שלך: ${getRoleLabel(invitationInfo.role)}`
-              : "ברוך הבא למערכת. פנה למנהל כדי לקבל הרשאות.",
+              : "הבקשה שלך נשלחה למנהל המערכת. תקבל גישה לאחר אישור.",
           });
           navigate("/");
         }
