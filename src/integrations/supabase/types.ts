@@ -326,6 +326,7 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          business_type: string | null
           contact_name: string | null
           created_at: string
           email: string | null
@@ -333,9 +334,11 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          supplier_type: string | null
           updated_at: string
         }
         Insert: {
+          business_type?: string | null
           contact_name?: string | null
           created_at?: string
           email?: string | null
@@ -343,9 +346,11 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          supplier_type?: string | null
           updated_at?: string
         }
         Update: {
+          business_type?: string | null
           contact_name?: string | null
           created_at?: string
           email?: string | null
@@ -353,6 +358,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          supplier_type?: string | null
           updated_at?: string
         }
         Relationships: []

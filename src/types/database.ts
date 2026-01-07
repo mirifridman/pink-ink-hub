@@ -26,10 +26,12 @@ export interface Issue {
 export interface Supplier {
   id: string;
   name: string;
-  contact_name?: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  supplier_type?: string | null;
+  business_type?: string | null;
   created_at: string;
   updated_at: string;
 }
