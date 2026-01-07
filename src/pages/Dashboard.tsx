@@ -58,6 +58,12 @@ export default function Dashboard() {
   });
 
   const handleApproveReminder = (id: string) => {
+    // Find the reminder and check if it has contact info
+    const reminder = pendingReminders?.find(r => r.id === id);
+    if (reminder && !reminder.hasContactInfo) {
+      toast.error("לא ניתן לשלוח הקצאה, חסרים פרטי קשר");
+      return;
+    }
     approveReminder.mutate(id);
   };
 
