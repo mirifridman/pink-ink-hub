@@ -510,19 +510,30 @@ export function useAllUsersWithRoles() {
   return useQuery({
     queryKey: ["allUsersWithRoles"],
     queryFn: async () => {
+      // First get all roles
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select(`
-          user_id,
-          role,
-          profile:profiles(id, full_name, email)
-        `);
+        .select("user_id, role");
       if (roleError) throw roleError;
+      
+      if (!roleData || roleData.length === 0) return [];
+      
+      const userIds = roleData.map(r => r.user_id);
+      
+      // Then get profiles for those users
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      if (profileError) throw profileError;
+      
+      // Combine the data
+      const profileMap = new Map(profileData?.map(p => [p.id, p]) || []);
       
       return roleData.map(r => ({
         id: r.user_id,
-        full_name: (r.profile as any)?.full_name || null,
-        email: (r.profile as any)?.email || null,
+        full_name: profileMap.get(r.user_id)?.full_name || null,
+        email: profileMap.get(r.user_id)?.email || null,
         role: r.role,
       })) as UserWithRole[];
     },
