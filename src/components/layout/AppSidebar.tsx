@@ -42,8 +42,11 @@ const menuItems: MenuItem[] = [
   { icon: Settings, label: "הגדרות", path: "/settings", roles: ["admin"] },
 ];
 
+interface AppSidebarProps {
+  onNavigate?: () => void;
+}
 
-export function AppSidebar() {
+export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const location = useLocation();
   const { hasPermission } = useAuth();
   const { data: pendingRemindersCount } = usePendingRemindersCount();
@@ -60,8 +63,8 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="fixed top-0 right-0 h-screen w-64 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col z-50">
-      {/* Logo */}
+    <aside className="md:fixed md:top-0 md:right-0 h-full md:h-screen w-full md:w-64 bg-sidebar text-sidebar-foreground md:border-l border-sidebar-border flex flex-col z-50">
+      {/* Logo - Hidden on mobile (header shows it) */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-neon flex items-center justify-center animate-pulse-neon">
@@ -75,7 +78,7 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
           const badgeCount = getBadgeCount(item.badgeKey);
@@ -84,6 +87,7 @@ export function AppSidebar() {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
