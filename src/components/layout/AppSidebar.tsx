@@ -26,12 +26,13 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "דשבורד", path: "/", roles: ["admin", "editor", "designer"] },
-  { icon: BookOpen, label: "גליונות", path: "/issues", roles: ["admin", "editor", "designer"] },
-  { icon: TableProperties, label: "ליינאפ", path: "/lineup", roles: ["admin", "editor", "designer"] },
-  { icon: Users, label: "ספקים", path: "/suppliers", roles: ["admin", "editor", "designer", "publisher"] },
+  { icon: BookOpen, label: "גליונות", path: "/issues", roles: ["admin", "editor", "designer", "publisher"] },
+  { icon: TableProperties, label: "ליינאפ", path: "/lineup", roles: ["admin", "editor", "designer", "publisher"] },
+  { icon: Users, label: "ספקים", path: "/suppliers", roles: ["admin", "editor", "designer"] },
+  { icon: Users, label: "אנשי צוות", path: "/team", roles: ["admin", "editor", "designer", "publisher"] },
   { icon: Bell, label: "תזכורות", path: "/reminders", roles: ["admin", "editor"] },
   { icon: Calendar, label: "לוח רבעוני", path: "/schedule", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: MessageSquare, label: "הודעות לעורכת", path: "/messages", roles: ["admin", "editor", "publisher"] },
+  { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", roles: ["admin", "editor", "designer", "publisher"] },
   { icon: UserCog, label: "ניהול משתמשים", path: "/users", roles: ["admin"] },
   { icon: Settings, label: "הגדרות", path: "/settings", roles: ["admin"] },
 ];

@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Issues from "./pages/Issues";
 import Lineup from "./pages/Lineup";
 import Suppliers from "./pages/Suppliers";
+import Team from "./pages/Team";
 import Reminders from "./pages/Reminders";
 import Schedule from "./pages/Schedule";
 import Messages from "./pages/Messages";
@@ -34,18 +35,23 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/issues" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
                 <Issues />
               </ProtectedRoute>
             } />
             <Route path="/lineup" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
                 <Lineup />
               </ProtectedRoute>
             } />
             <Route path="/suppliers" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer"]}>
                 <Suppliers />
+              </ProtectedRoute>
+            } />
+            <Route path="/team" element={
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
+                <Team />
               </ProtectedRoute>
             } />
             <Route path="/reminders" element={
@@ -59,7 +65,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/messages" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "publisher"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher"]}>
                 <Messages />
               </ProtectedRoute>
             } />

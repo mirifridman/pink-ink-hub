@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean | null
+          recipient_id: string | null
           sender_id: string
           subject: string
         }
@@ -28,6 +29,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean | null
+          recipient_id?: string | null
           sender_id: string
           subject: string
         }
@@ -36,10 +38,19 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean | null
+          recipient_id?: string | null
           sender_id?: string
           subject?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "editor_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insert_suppliers: {
         Row: {
