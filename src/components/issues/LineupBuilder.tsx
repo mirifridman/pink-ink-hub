@@ -8,7 +8,7 @@ import { Plus, Trash2, Save } from "lucide-react";
 import { PagePickerModal } from "./PagePickerModal";
 import { SupplierSelect } from "./SupplierSelect";
 import { NewIssueData } from "./NewIssueModal";
-import { useCreateIssue, useCreateLineupItem, useCreateInsert, useLineupItems } from "@/hooks/useIssues";
+import { useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, useLineupItems, useInserts } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
@@ -27,6 +27,7 @@ import {
 
 interface LineupBuilderProps {
   issueData: NewIssueData;
+  existingIssueId?: string; // For editing existing drafts
   onBack: () => void;
   onClose: () => void;
 }
@@ -50,12 +51,17 @@ interface InsertRow {
 
 const AUTO_SAVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
 
-export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps) {
+export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: LineupBuilderProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const createIssue = useCreateIssue();
+  const updateIssue = useUpdateIssue();
   const createLineupItem = useCreateLineupItem();
+  const updateLineupItem = useUpdateLineupItem();
+  const deleteLineupItem = useDeleteLineupItem();
   const createInsert = useCreateInsert();
+  const updateInsert = useUpdateInsert();
+  const deleteInsert = useDeleteInsert();
   
   const [lineupRows, setLineupRows] = useState<LineupRow[]>([]);
   const [hasInserts, setHasInserts] = useState(false);
@@ -63,17 +69,54 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
   const [pagePickerOpen, setPagePickerOpen] = useState(false);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [savedIssueId, setSavedIssueId] = useState<string | null>(null);
+  const [savedIssueId, setSavedIssueId] = useState<string | null>(existingIssueId || null);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const hasChangesRef = useRef(false);
   const pendingNavigationRef = useRef<(() => void) | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
+  // Load existing lineup items if editing a draft
+  const { data: existingLineupItems } = useLineupItems(existingIssueId);
+  const { data: existingInserts } = useInserts(existingIssueId);
+  
   // Load from source issue if copying lineup
   const { data: sourceLineupItems } = useLineupItems(issueData.copy_lineup_from);
 
+  // Load existing data when editing a draft
   useEffect(() => {
-    if (issueData.copy_lineup_from && sourceLineupItems) {
+    if (existingIssueId && existingLineupItems && !initialLoadDone) {
+      const rows = existingLineupItems.map((item) => ({
+        id: item.id,
+        pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
+        content: item.content,
+        supplierId: item.supplier_id || undefined,
+        source: item.source || "",
+        notes: item.notes || "",
+      }));
+      setLineupRows(rows);
+      setInitialLoadDone(true);
+    }
+  }, [existingIssueId, existingLineupItems, initialLoadDone]);
+
+  // Load existing inserts when editing a draft
+  useEffect(() => {
+    if (existingIssueId && existingInserts && existingInserts.length > 0 && !initialLoadDone) {
+      setHasInserts(true);
+      const rows = existingInserts.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || "",
+        supplierId: item.supplier_id || undefined,
+        notes: item.notes || "",
+      }));
+      setInsertRows(rows);
+    }
+  }, [existingIssueId, existingInserts, initialLoadDone]);
+
+  // Load from source issue if copying lineup (for new issues)
+  useEffect(() => {
+    if (!existingIssueId && issueData.copy_lineup_from && sourceLineupItems) {
       const copiedRows = sourceLineupItems.map((item, idx) => ({
         id: `copied-${idx}`,
         pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
@@ -84,7 +127,7 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
       }));
       setLineupRows(copiedRows);
     }
-  }, [sourceLineupItems, issueData.copy_lineup_from]);
+  }, [existingIssueId, sourceLineupItems, issueData.copy_lineup_from]);
 
   // Track if there are unsaved changes
   useEffect(() => {
@@ -182,52 +225,133 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
 
     setSaving(true);
     try {
-      // Create the issue
-      const issue = await createIssue.mutateAsync({
-        magazine_id: issueData.magazine_id,
-        issue_number: issueData.issue_number,
-        template_pages: issueData.template_pages,
-        distribution_month: format(issueData.distribution_month, "yyyy-MM-dd"),
-        theme: issueData.theme,
-        design_start_date: format(issueData.design_start_date, "yyyy-MM-dd"),
-        sketch_close_date: format(issueData.sketch_close_date, "yyyy-MM-dd"),
-        print_date: format(issueData.print_date, "yyyy-MM-dd"),
-        status: asDraft ? "draft" : "in_progress",
-        created_by: user.id,
-      });
-
-      setSavedIssueId(issue.id);
-
-      // Create lineup items
-      for (const row of lineupRows) {
-        if (row.pages.length > 0 && row.content) {
-          const sortedPages = [...row.pages].sort((a, b) => a - b);
-          await createLineupItem.mutateAsync({
-            issue_id: issue.id,
-            page_start: sortedPages[0],
-            page_end: sortedPages[sortedPages.length - 1],
-            content: row.content,
-            supplier_id: row.supplierId || null,
-            source: row.source || null,
-            notes: row.notes || null,
-            text_ready: false,
-            files_ready: false,
-            is_designed: false,
-            designer_notes: null,
-          });
+      let issueId = savedIssueId;
+      
+      if (existingIssueId) {
+        // Update existing issue
+        await updateIssue.mutateAsync({
+          id: existingIssueId,
+          status: asDraft ? "draft" : "in_progress",
+        });
+        issueId = existingIssueId;
+        
+        // For existing issues, we need to update/create/delete lineup items
+        // Get the IDs of rows that were originally loaded
+        const existingRowIds = existingLineupItems?.map(item => item.id) || [];
+        const currentRowIds = lineupRows.map(row => row.id);
+        
+        // Delete removed items
+        for (const existingId of existingRowIds) {
+          if (!currentRowIds.includes(existingId)) {
+            await deleteLineupItem.mutateAsync({ id: existingId, issueId: existingIssueId });
+          }
         }
-      }
+        
+        // Update or create items
+        for (const row of lineupRows) {
+          if (row.pages.length > 0 && row.content) {
+            const sortedPages = [...row.pages].sort((a, b) => a - b);
+            const isExisting = existingRowIds.includes(row.id);
+            
+            if (isExisting) {
+              await updateLineupItem.mutateAsync({
+                id: row.id,
+                page_start: sortedPages[0],
+                page_end: sortedPages[sortedPages.length - 1],
+                content: row.content,
+                supplier_id: row.supplierId || null,
+                source: row.source || null,
+                notes: row.notes || null,
+              });
+            } else {
+              await createLineupItem.mutateAsync({
+                issue_id: existingIssueId,
+                page_start: sortedPages[0],
+                page_end: sortedPages[sortedPages.length - 1],
+                content: row.content,
+                supplier_id: row.supplierId || null,
+                source: row.source || null,
+                notes: row.notes || null,
+                text_ready: false,
+                files_ready: false,
+                is_designed: false,
+                designer_notes: null,
+              });
+            }
+          }
+        }
+        
+        // Handle inserts similarly
+        const existingInsertIds = existingInserts?.map(item => item.id) || [];
+        const currentInsertIds = insertRows.map(row => row.id);
+        
+        // Delete removed inserts
+        for (const existingId of existingInsertIds) {
+          if (!currentInsertIds.includes(existingId)) {
+            await deleteInsert.mutateAsync({ id: existingId, issueId: existingIssueId });
+          }
+        }
+        
+        // Update or create inserts
+        if (hasInserts) {
+          for (const insert of insertRows) {
+            if (insert.name) {
+              const isExisting = existingInsertIds.includes(insert.id);
+              
+              if (isExisting) {
+                await updateInsert.mutateAsync({
+                  id: insert.id,
+                  name: insert.name,
+                  description: insert.description || null,
+                  supplier_id: insert.supplierId || null,
+                  notes: insert.notes || null,
+                });
+              } else {
+                await createInsert.mutateAsync({
+                  issue_id: existingIssueId,
+                  name: insert.name,
+                  description: insert.description || null,
+                  supplier_id: insert.supplierId || null,
+                  notes: insert.notes || null,
+                  text_ready: false,
+                  files_ready: false,
+                  is_designed: false,
+                  designer_notes: null,
+                });
+              }
+            }
+          }
+        }
+      } else {
+        // Create new issue
+        const issue = await createIssue.mutateAsync({
+          magazine_id: issueData.magazine_id,
+          issue_number: issueData.issue_number,
+          template_pages: issueData.template_pages,
+          distribution_month: format(issueData.distribution_month, "yyyy-MM-dd"),
+          theme: issueData.theme,
+          design_start_date: format(issueData.design_start_date, "yyyy-MM-dd"),
+          sketch_close_date: format(issueData.sketch_close_date, "yyyy-MM-dd"),
+          print_date: format(issueData.print_date, "yyyy-MM-dd"),
+          status: asDraft ? "draft" : "in_progress",
+          created_by: user.id,
+        });
 
-      // Create inserts
-      if (hasInserts) {
-        for (const insert of insertRows) {
-          if (insert.name) {
-            await createInsert.mutateAsync({
+        issueId = issue.id;
+        setSavedIssueId(issue.id);
+
+        // Create lineup items
+        for (const row of lineupRows) {
+          if (row.pages.length > 0 && row.content) {
+            const sortedPages = [...row.pages].sort((a, b) => a - b);
+            await createLineupItem.mutateAsync({
               issue_id: issue.id,
-              name: insert.name,
-              description: insert.description || null,
-              supplier_id: insert.supplierId || null,
-              notes: insert.notes || null,
+              page_start: sortedPages[0],
+              page_end: sortedPages[sortedPages.length - 1],
+              content: row.content,
+              supplier_id: row.supplierId || null,
+              source: row.source || null,
+              notes: row.notes || null,
               text_ready: false,
               files_ready: false,
               is_designed: false,
@@ -235,20 +359,41 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
             });
           }
         }
+
+        // Create inserts
+        if (hasInserts) {
+          for (const insert of insertRows) {
+            if (insert.name) {
+              await createInsert.mutateAsync({
+                issue_id: issue.id,
+                name: insert.name,
+                description: insert.description || null,
+                supplier_id: insert.supplierId || null,
+                notes: insert.notes || null,
+                text_ready: false,
+                files_ready: false,
+                is_designed: false,
+                designer_notes: null,
+              });
+            }
+          }
+        }
       }
 
       if (isAutoSave) {
         setLastAutoSave(new Date());
-        toast.success("נשמר אוטומטית כטיוטה", { duration: 2000 });
+        toast.success("נשמר אוטומטית", { duration: 2000 });
       } else {
-        toast.success(asDraft ? "הגיליון נשמר כטיוטה" : "הגיליון נוצר בהצלחה");
+        toast.success(asDraft ? "הגיליון נשמר כטיוטה" : "הגיליון נשמר בהצלחה");
         onClose();
-        navigate(`/issues?view=${issue.id}`);
+        navigate(`/issues?view=${issueId}`);
       }
     } catch (error) {
-      console.error("Error creating issue:", error);
+      console.error("Error saving issue:", error);
       if (isAutoSave) {
         toast.error("שגיאה בשמירה אוטומטית");
+      } else {
+        toast.error("שגיאה בשמירה");
       }
     } finally {
       setSaving(false);

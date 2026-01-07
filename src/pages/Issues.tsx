@@ -28,6 +28,7 @@ export default function Issues() {
   const [showNewIssueModal, setShowNewIssueModal] = useState(false);
   const [showLineupBuilder, setShowLineupBuilder] = useState(false);
   const [newIssueData, setNewIssueData] = useState<NewIssueData | null>(null);
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
 
   const canCreateIssue = role === "admin" || role === "editor";
 
@@ -40,6 +41,7 @@ export default function Issues() {
   const handleCloseBuilder = () => {
     setShowLineupBuilder(false);
     setNewIssueData(null);
+    setEditingIssueId(null);
   };
 
   const handleBackFromView = () => {
@@ -62,6 +64,7 @@ export default function Issues() {
     };
     
     setNewIssueData(issueData);
+    setEditingIssueId(viewIssue.id);
     setSearchParams({});
     setShowLineupBuilder(true);
   };
@@ -186,9 +189,16 @@ export default function Issues() {
           {newIssueData && (
             <LineupBuilder
               issueData={newIssueData}
+              existingIssueId={editingIssueId || undefined}
               onBack={() => {
-                setShowLineupBuilder(false);
-                setShowNewIssueModal(true);
+                if (editingIssueId) {
+                  // If editing, go back to the issue view
+                  handleCloseBuilder();
+                  setSearchParams({ view: editingIssueId });
+                } else {
+                  setShowLineupBuilder(false);
+                  setShowNewIssueModal(true);
+                }
               }}
               onClose={handleCloseBuilder}
             />

@@ -312,6 +312,27 @@ export function useUpdateInsert() {
   });
 }
 
+export function useDeleteInsert() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, issueId }: { id: string; issueId: string }) => {
+      const { error } = await supabase
+        .from("inserts")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return issueId;
+    },
+    onSuccess: (issueId) => {
+      queryClient.invalidateQueries({ queryKey: ["inserts", issueId] });
+    },
+    onError: (error) => {
+      toast.error("שגיאה במחיקת האינסרט: " + error.message);
+    },
+  });
+}
+
 // Magazine management
 export function useCreateMagazine() {
   const queryClient = useQueryClient();
