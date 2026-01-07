@@ -6,22 +6,53 @@ import {
   Bell, 
   Calendar,
   Settings,
-  Sparkles
+  Sparkles,
+  MessageSquare,
+  LogOut
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "דשבורד", path: "/" },
-  { icon: BookOpen, label: "גליונות", path: "/issues" },
-  { icon: TableProperties, label: "ליינאפ", path: "/lineup" },
-  { icon: Users, label: "ספקים", path: "/suppliers" },
-  { icon: Bell, label: "תזכורות", path: "/reminders" },
-  { icon: Calendar, label: "לוח רבעוני", path: "/schedule" },
+type AppRole = "admin" | "designer" | "editor" | "publisher";
+
+interface MenuItem {
+  icon: typeof LayoutDashboard;
+  label: string;
+  path: string;
+  roles: AppRole[];
+}
+
+const menuItems: MenuItem[] = [
+  { icon: LayoutDashboard, label: "דשבורד", path: "/", roles: ["admin", "editor", "designer"] },
+  { icon: BookOpen, label: "גליונות", path: "/issues", roles: ["admin", "editor", "designer"] },
+  { icon: TableProperties, label: "ליינאפ", path: "/lineup", roles: ["admin", "editor", "designer"] },
+  { icon: Users, label: "ספקים", path: "/suppliers", roles: ["admin", "editor", "designer", "publisher"] },
+  { icon: Bell, label: "תזכורות", path: "/reminders", roles: ["admin", "editor"] },
+  { icon: Calendar, label: "לוח רבעוני", path: "/schedule", roles: ["admin", "editor", "designer", "publisher"] },
+  { icon: MessageSquare, label: "הודעות לעורכת", path: "/messages", roles: ["admin", "editor", "publisher"] },
 ];
+
+const roleLabels: Record<AppRole, string> = {
+  admin: "מנהל",
+  editor: "עורך",
+  designer: "מעצב",
+  publisher: "צוות הוצאה לאור",
+};
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { role, signOut, hasPermission } = useAuth();
+
+  const filteredMenuItems = menuItems.filter((item) => 
+    hasPermission(item.roles)
+  );
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   return (
     <aside className="fixed top-0 right-0 h-screen w-64 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col z-50">
@@ -40,7 +71,7 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <NavLink
@@ -63,20 +94,20 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Settings */}
-      <div className="p-4 border-t border-sidebar-border">
-        <NavLink
-          to="/settings"
-          className={cn(
-            "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
-            location.pathname === "/settings"
-              ? "bg-sidebar-primary text-sidebar-primary-foreground"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          )}
+      {/* User Info & Logout */}
+      <div className="p-4 border-t border-sidebar-border space-y-2">
+        {role && (
+          <div className="px-4 py-2 text-xs text-sidebar-foreground/60">
+            תפקיד: {roleLabels[role]}
+          </div>
+        )}
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
-          <Settings className="w-5 h-5" />
-          <span>הגדרות</span>
-        </NavLink>
+          <LogOut className="w-5 h-5" />
+          <span>התנתק</span>
+        </button>
       </div>
     </aside>
   );
