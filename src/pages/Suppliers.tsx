@@ -57,6 +57,9 @@ const supplierTypes = [
   { value: "writer", label: "כותב/ת", icon: Pencil },
   { value: "illustrator", label: "מאייר/ת", icon: Palette },
   { value: "photographer", label: "צלם/ת", icon: Camera },
+  { value: "editor", label: "עורכ/ת", icon: FileText },
+  { value: "sub_editor", label: "עורכ/ת משנה", icon: FileText },
+  { value: "designer", label: "מעצב/ת", icon: Palette },
   { value: "other", label: "אחר", icon: Users },
 ];
 
