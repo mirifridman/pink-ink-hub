@@ -7,8 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Save } from "lucide-react";
 import { PagePickerModal } from "./PagePickerModal";
 import { SupplierSelect } from "./SupplierSelect";
+import { EditorSelect } from "./EditorSelect";
+import { IssueEditorsSection } from "./IssueEditorsSection";
 import { NewIssueData } from "./NewIssueModal";
-import { useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, useLineupItems, useInserts } from "@/hooks/useIssues";
+import { 
+  useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
+  useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
+  useLineupItems, useInserts, useEditors, useIssueEditors, useAddIssueEditor, 
+  useRemoveIssueEditor 
+} from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
@@ -39,6 +46,7 @@ interface LineupRow {
   supplierId?: string;
   source: string;
   notes: string;
+  responsibleEditorId?: string;
 }
 
 interface InsertRow {
@@ -47,6 +55,7 @@ interface InsertRow {
   description: string;
   supplierId?: string;
   notes: string;
+  responsibleEditorId?: string;
 }
 
 const AUTO_SAVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
@@ -62,6 +71,13 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const createInsert = useCreateInsert();
   const updateInsert = useUpdateInsert();
   const deleteInsert = useDeleteInsert();
+  const addIssueEditor = useAddIssueEditor();
+  const removeIssueEditor = useRemoveIssueEditor();
+  
+  // Editors data
+  const { data: allEditors = [] } = useEditors();
+  const { data: issueEditors = [] } = useIssueEditors(existingIssueId);
+  const [pendingEditors, setPendingEditors] = useState<string[]>([]);
   
   const [lineupRows, setLineupRows] = useState<LineupRow[]>([]);
   const [hasInserts, setHasInserts] = useState(false);
@@ -93,6 +109,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         supplierId: item.supplier_id || undefined,
         source: item.source || "",
         notes: item.notes || "",
+        responsibleEditorId: (item as any).responsible_editor_id || undefined,
       }));
       setLineupRows(rows);
       setInitialLoadDone(true);
@@ -109,6 +126,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         description: item.description || "",
         supplierId: item.supplier_id || undefined,
         notes: item.notes || "",
+        responsibleEditorId: (item as any).responsible_editor_id || undefined,
       }));
       setInsertRows(rows);
     }
@@ -175,6 +193,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       supplierId: undefined,
       source: "",
       notes: "",
+      responsibleEditorId: undefined,
     };
     setLineupRows([...lineupRows, newRow]);
   };
@@ -196,6 +215,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       description: "",
       supplierId: undefined,
       notes: "",
+      responsibleEditorId: undefined,
     };
     setInsertRows([...insertRows, newRow]);
   };
@@ -262,7 +282,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 supplier_id: row.supplierId || null,
                 source: row.source || null,
                 notes: row.notes || null,
-              });
+                responsible_editor_id: row.responsibleEditorId || null,
+              } as any);
             } else {
               await createLineupItem.mutateAsync({
                 issue_id: existingIssueId,
@@ -276,7 +297,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 files_ready: false,
                 is_designed: false,
                 designer_notes: null,
-              });
+                responsible_editor_id: row.responsibleEditorId || null,
+              } as any);
             }
           }
         }
@@ -305,7 +327,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   description: insert.description || null,
                   supplier_id: insert.supplierId || null,
                   notes: insert.notes || null,
-                });
+                  responsible_editor_id: insert.responsibleEditorId || null,
+                } as any);
               } else {
                 await createInsert.mutateAsync({
                   issue_id: existingIssueId,
@@ -317,7 +340,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   files_ready: false,
                   is_designed: false,
                   designer_notes: null,
-                });
+                  responsible_editor_id: insert.responsibleEditorId || null,
+                } as any);
               }
             }
           }
@@ -340,6 +364,11 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         issueId = issue.id;
         setSavedIssueId(issue.id);
 
+        // Add editors for new issue
+        for (const editorId of pendingEditors) {
+          await addIssueEditor.mutateAsync({ issueId: issue.id, editorId });
+        }
+
         // Create lineup items
         for (const row of lineupRows) {
           if (row.pages.length > 0 && row.content) {
@@ -356,7 +385,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               files_ready: false,
               is_designed: false,
               designer_notes: null,
-            });
+              responsible_editor_id: row.responsibleEditorId || null,
+            } as any);
           }
         }
 
@@ -374,7 +404,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 files_ready: false,
                 is_designed: false,
                 designer_notes: null,
-              });
+                responsible_editor_id: insert.responsibleEditorId || null,
+              } as any);
             }
           }
         }
@@ -438,6 +469,41 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     return sorted.join(", ");
   };
 
+  // Selected editors from issue_editors or pending for new issue
+  const selectedEditorsDisplay = existingIssueId
+    ? issueEditors.map((ie) => ({
+        id: ie.id,
+        editor_id: ie.editor_id,
+        editor: ie.editor,
+      }))
+    : pendingEditors.map((editorId, idx) => ({
+        id: `pending-${idx}`,
+        editor_id: editorId,
+        editor: allEditors.find((e) => e.id === editorId) || null,
+      }));
+
+  const handleAddEditorToIssue = async (editorId: string) => {
+    if (existingIssueId) {
+      await addIssueEditor.mutateAsync({ issueId: existingIssueId, editorId });
+    } else {
+      setPendingEditors((prev) => [...prev, editorId]);
+    }
+  };
+
+  const handleRemoveEditorFromIssue = async (id: string) => {
+    if (existingIssueId) {
+      await removeIssueEditor.mutateAsync({ id, issueId: existingIssueId });
+    } else {
+      const idx = parseInt(id.replace("pending-", ""));
+      setPendingEditors((prev) => prev.filter((_, i) => i !== idx));
+    }
+  };
+
+  // Get editors assigned to this issue for the responsible editor dropdown
+  const assignedEditors = existingIssueId
+    ? issueEditors.map((ie) => ie.editor).filter(Boolean) as { id: string; full_name: string | null; email: string | null }[]
+    : allEditors.filter((e) => pendingEditors.includes(e.id));
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
@@ -464,6 +530,16 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         </div>
       </div>
 
+      {/* Issue Editors Section */}
+      <div className="p-4 border rounded-lg bg-muted/30">
+        <IssueEditorsSection
+          selectedEditors={selectedEditorsDisplay}
+          availableEditors={allEditors}
+          onAddEditor={handleAddEditorToIssue}
+          onRemoveEditor={handleRemoveEditorFromIssue}
+        />
+      </div>
+
       {/* Lineup Table */}
       <div className="border rounded-lg overflow-hidden">
         <Table>
@@ -473,7 +549,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               <TableHead className="text-right">תוכן</TableHead>
               <TableHead className="text-right w-40">ספק</TableHead>
               <TableHead className="text-right w-32">מקור</TableHead>
-              <TableHead className="text-right w-40">הערות</TableHead>
+              <TableHead className="text-right w-32">הערות</TableHead>
+              {assignedEditors.length > 0 && (
+                <TableHead className="text-right w-36">עורך אחראי</TableHead>
+              )}
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -520,6 +599,16 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                     placeholder="הערות"
                   />
                 </TableCell>
+                {assignedEditors.length > 0 && (
+                  <TableCell>
+                    <EditorSelect
+                      value={row.responsibleEditorId}
+                      onChange={(id) => updateRow(row.id, { responsibleEditorId: id })}
+                      editors={assignedEditors}
+                      placeholder="בחר עורך"
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   <Button
                     variant="ghost"
@@ -564,7 +653,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   <TableHead className="text-right">שם האינסרט</TableHead>
                   <TableHead className="text-right">תיאור</TableHead>
                   <TableHead className="text-right w-40">ספק</TableHead>
-                  <TableHead className="text-right w-40">הערות</TableHead>
+                  <TableHead className="text-right w-32">הערות</TableHead>
+                  {assignedEditors.length > 0 && (
+                    <TableHead className="text-right w-36">עורך אחראי</TableHead>
+                  )}
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -598,6 +690,16 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                         placeholder="הערות"
                       />
                     </TableCell>
+                    {assignedEditors.length > 0 && (
+                      <TableCell>
+                        <EditorSelect
+                          value={row.responsibleEditorId}
+                          onChange={(id) => updateInsertRow(row.id, { responsibleEditorId: id })}
+                          editors={assignedEditors}
+                          placeholder="בחר עורך"
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Button
                         variant="ghost"

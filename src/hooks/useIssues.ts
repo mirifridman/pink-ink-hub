@@ -369,3 +369,105 @@ export function useDeleteMagazine() {
     },
   });
 }
+
+// Issue Editors
+interface IssueEditor {
+  id: string;
+  issue_id: string;
+  editor_id: string;
+  created_at: string;
+  editor: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  } | null;
+}
+
+export function useIssueEditors(issueId: string | undefined) {
+  return useQuery({
+    queryKey: ["issueEditors", issueId],
+    queryFn: async () => {
+      if (!issueId) return [];
+      const { data, error } = await supabase
+        .from("issue_editors")
+        .select(`
+          *,
+          editor:profiles(id, full_name, email)
+        `)
+        .eq("issue_id", issueId);
+      if (error) throw error;
+      return data as IssueEditor[];
+    },
+    enabled: !!issueId,
+  });
+}
+
+export function useAddIssueEditor() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ issueId, editorId }: { issueId: string; editorId: string }) => {
+      const { data, error } = await supabase
+        .from("issue_editors")
+        .insert({ issue_id: issueId, editor_id: editorId })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["issueEditors", data.issue_id] });
+    },
+    onError: (error) => {
+      toast.error("שגיאה בהוספת עורך: " + error.message);
+    },
+  });
+}
+
+export function useRemoveIssueEditor() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, issueId }: { id: string; issueId: string }) => {
+      const { error } = await supabase
+        .from("issue_editors")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return issueId;
+    },
+    onSuccess: (issueId) => {
+      queryClient.invalidateQueries({ queryKey: ["issueEditors", issueId] });
+    },
+    onError: (error) => {
+      toast.error("שגיאה בהסרת עורך: " + error.message);
+    },
+  });
+}
+
+// Editors list (profiles with editor role)
+export function useEditors() {
+  return useQuery({
+    queryKey: ["editors"],
+    queryFn: async () => {
+      // First get user_ids with editor/admin roles
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["editor", "admin"]);
+      if (roleError) throw roleError;
+      
+      const userIds = roleData.map(r => r.user_id);
+      if (userIds.length === 0) return [];
+      
+      // Then get their profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      if (profileError) throw profileError;
+      
+      return profileData as { id: string; full_name: string | null; email: string | null }[];
+    },
+  });
+}

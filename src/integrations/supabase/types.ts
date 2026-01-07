@@ -52,6 +52,7 @@ export type Database = {
           issue_id: string
           name: string
           notes: string | null
+          responsible_editor_id: string | null
           supplier_id: string | null
           text_ready: boolean
           updated_at: string
@@ -66,6 +67,7 @@ export type Database = {
           issue_id: string
           name: string
           notes?: string | null
+          responsible_editor_id?: string | null
           supplier_id?: string | null
           text_ready?: boolean
           updated_at?: string
@@ -80,6 +82,7 @@ export type Database = {
           issue_id?: string
           name?: string
           notes?: string | null
+          responsible_editor_id?: string | null
           supplier_id?: string | null
           text_ready?: boolean
           updated_at?: string
@@ -93,10 +96,53 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inserts_responsible_editor_id_fkey"
+            columns: ["responsible_editor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inserts_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issue_editors: {
+        Row: {
+          created_at: string
+          editor_id: string
+          id: string
+          issue_id: string
+        }
+        Insert: {
+          created_at?: string
+          editor_id: string
+          id?: string
+          issue_id: string
+        }
+        Update: {
+          created_at?: string
+          editor_id?: string
+          id?: string
+          issue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_editors_editor_id_fkey"
+            columns: ["editor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issue_editors_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
             referencedColumns: ["id"]
           },
         ]
@@ -169,6 +215,7 @@ export type Database = {
           notes: string | null
           page_end: number
           page_start: number
+          responsible_editor_id: string | null
           source: string | null
           supplier_id: string | null
           text_ready: boolean
@@ -185,6 +232,7 @@ export type Database = {
           notes?: string | null
           page_end: number
           page_start: number
+          responsible_editor_id?: string | null
           source?: string | null
           supplier_id?: string | null
           text_ready?: boolean
@@ -201,6 +249,7 @@ export type Database = {
           notes?: string | null
           page_end?: number
           page_start?: number
+          responsible_editor_id?: string | null
           source?: string | null
           supplier_id?: string | null
           text_ready?: boolean
@@ -212,6 +261,13 @@ export type Database = {
             columns: ["issue_id"]
             isOneToOne: false
             referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineup_items_responsible_editor_id_fkey"
+            columns: ["responsible_editor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
