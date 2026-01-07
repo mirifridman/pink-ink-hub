@@ -65,6 +65,7 @@ const businessTypes = [
   { value: "exempt", label: "עוסק פטור" },
   { value: "company", label: "חברה בע״מ" },
   { value: "artist_salary", label: "שכר אמנים" },
+  { value: "payslip", label: "תלוש" },
 ];
 
 const getTypeIcon = (type: string | null) => {
