@@ -311,3 +311,40 @@ export function useUpdateInsert() {
     },
   });
 }
+
+// Magazine management
+export function useCreateMagazine() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (magazine: { name: string }) => {
+      const { data, error } = await supabase
+        .from("magazines")
+        .insert(magazine)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["magazines"] });
+    },
+  });
+}
+
+export function useDeleteMagazine() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("magazines")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["magazines"] });
+    },
+  });
+}

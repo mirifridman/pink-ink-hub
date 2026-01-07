@@ -6,7 +6,8 @@ import {
   Bell, 
   Calendar,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from "lucide-react";
 import { UserMenu } from "./UserMenu";
 import { NavLink, useLocation } from "react-router-dom";
@@ -30,6 +31,7 @@ const menuItems: MenuItem[] = [
   { icon: Bell, label: "תזכורות", path: "/reminders", roles: ["admin", "editor"] },
   { icon: Calendar, label: "לוח רבעוני", path: "/schedule", roles: ["admin", "editor", "designer", "publisher"] },
   { icon: MessageSquare, label: "הודעות לעורכת", path: "/messages", roles: ["admin", "editor", "publisher"] },
+  { icon: Settings, label: "הגדרות", path: "/settings", roles: ["admin"] },
 ];
 
 
