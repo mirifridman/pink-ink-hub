@@ -110,10 +110,10 @@ export function IssueView({ issue, onBack, onEditDraft }: IssueViewProps) {
             </AlertDialog>
           )}
           
-          {issue.status === "draft" && isEditor && onEditDraft && (
+          {isEditor && onEditDraft && (
             <Button onClick={onEditDraft} className="gradient-neon text-white">
               <Pencil className="w-4 h-4 ml-2" />
-              חזרה לעריכה
+              ערוך גיליון
             </Button>
           )}
         </div>
