@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   useMagazines, 
   useCreateMagazine, 
@@ -12,8 +13,9 @@ import {
   useAssignRole,
   useRemoveRole
 } from "@/hooks/useIssues";
-import { Plus, Trash2, BookOpen, Users } from "lucide-react";
+import { Plus, Trash2, BookOpen, Users, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 const roleLabels: Record<string, string> = {
   admin: "מנהל",
@@ -44,6 +56,16 @@ export default function Settings() {
   const [newMagazineName, setNewMagazineName] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRole, setSelectedRole] = useState<"admin" | "designer" | "editor" | "publisher">("editor");
+  
+  // New user form state
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "designer" | "editor" | "publisher">("editor");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  
+  const queryClient = useQueryClient();
   
   const { data: magazines, isLoading: isLoadingMagazines } = useMagazines();
   const { data: usersWithRoles, isLoading: isLoadingUsers } = useAllUsersWithRoles();
@@ -113,6 +135,55 @@ export default function Settings() {
       toast.success("התפקיד עודכן בהצלחה");
     } catch (error) {
       toast.error("שגיאה בעדכון התפקיד");
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUserEmail) {
+      toast.error("יש להזין כתובת אימייל");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("יש להתחבר מחדש");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "create",
+          email: newUserEmail,
+          fullName: newUserName,
+          password: newUserPassword || undefined,
+          role: newUserRole,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success("המשתמש נוצר בהצלחה");
+      setIsAddUserOpen(false);
+      setNewUserEmail("");
+      setNewUserName("");
+      setNewUserPassword("");
+      setNewUserRole("editor");
+      
+      // Refresh the user lists
+      queryClient.invalidateQueries({ queryKey: ["allUsersWithRoles"] });
+      queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
+    } catch (error: any) {
+      toast.error("שגיאה ביצירת המשתמש: " + error.message);
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -191,11 +262,80 @@ export default function Settings() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
               ניהול משתמשים ותפקידים
             </CardTitle>
+            <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="w-4 h-4 ml-2" />
+                  משתמש חדש
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>הוספת משתמש חדש</DialogTitle>
+                  <DialogDescription>
+                    הזן את פרטי המשתמש החדש. המשתמש יקבל גישה למערכת לפי התפקיד שנבחר.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">כתובת אימייל *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="user@example.com"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">שם מלא</Label>
+                    <Input
+                      id="name"
+                      placeholder="ישראל ישראלי"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">סיסמה (אופציונלי - תיווצר אוטומטית אם לא תוזן)</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="********"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>תפקיד</Label>
+                    <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as typeof newUserRole)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="editor">עורך</SelectItem>
+                        <SelectItem value="designer">מעצב</SelectItem>
+                        <SelectItem value="publisher">מפיץ</SelectItem>
+                        <SelectItem value="admin">מנהל</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
+                    ביטול
+                  </Button>
+                  <Button onClick={handleCreateUser} disabled={isCreatingUser}>
+                    {isCreatingUser ? "יוצר..." : "צור משתמש"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
