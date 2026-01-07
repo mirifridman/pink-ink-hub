@@ -19,7 +19,7 @@ interface RemindersCardProps {
 
 export function RemindersCard({ reminders, onApprove, onDismiss }: RemindersCardProps) {
   return (
-    <NeonCard className="col-span-full lg:col-span-2">
+    <NeonCard className="col-span-full lg:col-span-1">
       <NeonCardHeader>
         <NeonCardTitle className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-accent" />
@@ -34,22 +34,22 @@ export function RemindersCard({ reminders, onApprove, onDismiss }: RemindersCard
           </div>
         ) : (
           <div className="space-y-3">
-            {reminders.map((reminder) => (
+            {reminders.slice(0, 5).map((reminder) => (
               <div
                 key={reminder.id}
                 className="flex items-center justify-between p-4 rounded-xl bg-muted/50"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
                   <StatusBadge status={reminder.type} pulse>
                     {reminder.type === "critical" ? "קריטי" : "דחוף"}
                   </StatusBadge>
-                  <div>
-                    <p className="font-medium">{reminder.supplierName}</p>
-                    <p className="text-sm text-muted-foreground">{reminder.itemTitle}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{reminder.supplierName}</p>
+                    <p className="text-sm text-muted-foreground truncate">{reminder.itemTitle}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 text-muted-foreground ml-4">
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 text-muted-foreground ml-2">
                     {(reminder.contactMethod === "email" || reminder.contactMethod === "both") && (
                       <Mail className="w-4 h-4" />
                     )}
