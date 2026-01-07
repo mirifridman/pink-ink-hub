@@ -471,3 +471,94 @@ export function useEditors() {
     },
   });
 }
+
+// All users with roles (for settings management)
+interface UserWithRole {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: "admin" | "designer" | "editor" | "publisher";
+}
+
+export function useAllUsersWithRoles() {
+  return useQuery({
+    queryKey: ["allUsersWithRoles"],
+    queryFn: async () => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select(`
+          user_id,
+          role,
+          profile:profiles(id, full_name, email)
+        `);
+      if (roleError) throw roleError;
+      
+      return roleData.map(r => ({
+        id: r.user_id,
+        full_name: (r.profile as any)?.full_name || null,
+        email: (r.profile as any)?.email || null,
+        role: r.role,
+      })) as UserWithRole[];
+    },
+  });
+}
+
+export function useAssignRole() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "designer" | "editor" | "publisher" }) => {
+      // First delete existing role if any
+      await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+      
+      // Then insert new role
+      const { data, error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allUsersWithRoles"] });
+      queryClient.invalidateQueries({ queryKey: ["editors"] });
+    },
+  });
+}
+
+export function useRemoveRole() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allUsersWithRoles"] });
+      queryClient.invalidateQueries({ queryKey: ["editors"] });
+    },
+  });
+}
+
+// All profiles (for adding new editors)
+export function useAllProfiles() {
+  return useQuery({
+    queryKey: ["allProfiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .order("full_name");
+      if (error) throw error;
+      return data as { id: string; full_name: string | null; email: string | null }[];
+    },
+  });
+}
