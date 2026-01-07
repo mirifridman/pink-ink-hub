@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import { useCreateIssue, useCreateLineupItem, useCreateInsert, useLineupItems } 
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
-import { useNavigate, useBlocker } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -91,19 +91,18 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
     hasChangesRef.current = (lineupRows.length > 0 || insertRows.length > 0) && !savedIssueId;
   }, [lineupRows, insertRows, savedIssueId]);
 
-  // Block navigation when there are unsaved changes
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasChangesRef.current && 
-      currentLocation.pathname !== nextLocation.pathname
-  );
-
+  // Warn before browser close/refresh
   useEffect(() => {
-    if (blocker.state === "blocked") {
-      pendingNavigationRef.current = () => blocker.proceed?.();
-      setShowExitDialog(true);
-    }
-  }, [blocker.state]);
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChangesRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Auto-save every 2 minutes
   useEffect(() => {
@@ -270,8 +269,16 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
 
   const handleCancelExit = () => {
     setShowExitDialog(false);
-    blocker.reset?.();
     pendingNavigationRef.current = null;
+  };
+
+  const handleBackClick = () => {
+    if (hasChangesRef.current) {
+      pendingNavigationRef.current = onBack;
+      setShowExitDialog(true);
+    } else {
+      onBack();
+    }
   };
 
   const formatPages = (pages: number[]) => {
@@ -473,7 +480,7 @@ export function LineupBuilder({ issueData, onBack, onClose }: LineupBuilderProps
 
       {/* Actions */}
       <div className="flex justify-between pt-4 border-t">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={handleBackClick}>
           חזור
         </Button>
         <div className="flex gap-3">
