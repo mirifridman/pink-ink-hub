@@ -407,6 +407,116 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_settings: {
+        Row: {
+          created_at: string
+          editor_reminder_2days: boolean
+          editor_reminder_overdue: boolean
+          id: string
+          supplier_reminder_2days: boolean
+          supplier_reminder_urgent: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          editor_reminder_2days?: boolean
+          editor_reminder_overdue?: boolean
+          id?: string
+          supplier_reminder_2days?: boolean
+          supplier_reminder_urgent?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          editor_reminder_2days?: boolean
+          editor_reminder_overdue?: boolean
+          id?: string
+          supplier_reminder_2days?: boolean
+          supplier_reminder_urgent?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reminders: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          insert_id: string | null
+          issue_id: string
+          lineup_item_id: string | null
+          message: string
+          scheduled_for: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          supplier_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          insert_id?: string | null
+          issue_id: string
+          lineup_item_id?: string | null
+          message: string
+          scheduled_for: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          supplier_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          insert_id?: string | null
+          issue_id?: string
+          lineup_item_id?: string | null
+          message?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          supplier_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_insert_id_fkey"
+            columns: ["insert_id"]
+            isOneToOne: false
+            referencedRelation: "inserts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_lineup_item_id_fkey"
+            columns: ["lineup_item_id"]
+            isOneToOne: false
+            referencedRelation: "lineup_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           business_type: string | null
@@ -445,6 +555,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      system_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          insert_id: string | null
+          is_read: boolean
+          issue_id: string | null
+          lineup_item_id: string | null
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insert_id?: string | null
+          is_read?: boolean
+          issue_id?: string | null
+          lineup_item_id?: string | null
+          message: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insert_id?: string | null
+          is_read?: boolean
+          issue_id?: string | null
+          lineup_item_id?: string | null
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_notifications_insert_id_fkey"
+            columns: ["insert_id"]
+            isOneToOne: false
+            referencedRelation: "inserts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_notifications_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_notifications_lineup_item_id_fkey"
+            columns: ["lineup_item_id"]
+            isOneToOne: false
+            referencedRelation: "lineup_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_invitations: {
         Row: {

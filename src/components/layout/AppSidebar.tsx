@@ -14,6 +14,8 @@ import { UserMenu } from "./UserMenu";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { SidebarBadge } from "./SidebarBadge";
+import { usePendingRemindersCount, useUnreadNotificationsCount } from "@/hooks/useReminders";
 
 type AppRole = "admin" | "designer" | "editor" | "publisher";
 
@@ -22,6 +24,7 @@ interface MenuItem {
   label: string;
   path: string;
   roles: AppRole[];
+  badgeKey?: "reminders" | "notifications";
 }
 
 const menuItems: MenuItem[] = [
@@ -30,9 +33,9 @@ const menuItems: MenuItem[] = [
   { icon: TableProperties, label: "ליינאפ", path: "/lineup", roles: ["admin", "editor", "designer", "publisher"] },
   { icon: Users, label: "ספקים", path: "/suppliers", roles: ["admin", "editor", "designer"] },
   { icon: Users, label: "אנשי צוות", path: "/team", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: Bell, label: "תזכורות", path: "/reminders", roles: ["admin", "editor"] },
+  { icon: Bell, label: "תזכורות", path: "/reminders", roles: ["admin", "editor"], badgeKey: "reminders" },
   { icon: Calendar, label: "לוח רבעוני", path: "/schedule", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", roles: ["admin", "editor", "designer", "publisher"] },
+  { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", roles: ["admin", "editor", "designer", "publisher"], badgeKey: "notifications" },
   { icon: UserCog, label: "ניהול משתמשים", path: "/users", roles: ["admin"] },
   { icon: Settings, label: "הגדרות", path: "/settings", roles: ["admin"] },
 ];
@@ -41,10 +44,18 @@ const menuItems: MenuItem[] = [
 export function AppSidebar() {
   const location = useLocation();
   const { hasPermission } = useAuth();
+  const { data: pendingRemindersCount } = usePendingRemindersCount();
+  const { data: unreadNotificationsCount } = useUnreadNotificationsCount();
 
   const filteredMenuItems = menuItems.filter((item) => 
     hasPermission(item.roles)
   );
+
+  const getBadgeCount = (badgeKey?: "reminders" | "notifications") => {
+    if (badgeKey === "reminders") return pendingRemindersCount || 0;
+    if (badgeKey === "notifications") return unreadNotificationsCount || 0;
+    return 0;
+  };
 
   return (
     <aside className="fixed top-0 right-0 h-screen w-64 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col z-50">
@@ -65,6 +76,8 @@ export function AppSidebar() {
       <nav className="flex-1 p-4 space-y-1">
         {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const badgeCount = getBadgeCount(item.badgeKey);
+          
           return (
             <NavLink
               key={item.path}
@@ -78,7 +91,10 @@ export function AppSidebar() {
             >
               <item.icon className="w-5 h-5" />
               <span>{item.label}</span>
-              {isActive && (
+              {badgeCount > 0 && (
+                <SidebarBadge count={badgeCount} />
+              )}
+              {isActive && !badgeCount && (
                 <div className="mr-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               )}
             </NavLink>
