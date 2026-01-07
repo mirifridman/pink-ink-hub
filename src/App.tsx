@@ -14,6 +14,7 @@ import Reminders from "./pages/Reminders";
 import Schedule from "./pages/Schedule";
 import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,11 @@ const App = () => (
             <Route path="/settings" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Users />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
