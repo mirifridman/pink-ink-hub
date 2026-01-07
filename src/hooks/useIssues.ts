@@ -3,6 +3,103 @@ import { supabase } from "@/integrations/supabase/client";
 import { Issue, Magazine, Supplier, LineupItem, Insert } from "@/types/database";
 import { toast } from "sonner";
 
+// Page Templates
+export interface PageTemplate {
+  id: string;
+  page_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function usePageTemplates() {
+  return useQuery({
+    queryKey: ["pageTemplates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("page_templates")
+        .select("*")
+        .order("page_count");
+      if (error) throw error;
+      return data as PageTemplate[];
+    },
+  });
+}
+
+export function useActivePageTemplates() {
+  return useQuery({
+    queryKey: ["activePageTemplates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("page_templates")
+        .select("*")
+        .eq("is_active", true)
+        .order("page_count");
+      if (error) throw error;
+      return data as PageTemplate[];
+    },
+  });
+}
+
+export function useCreatePageTemplate() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (pageCount: number) => {
+      const { data, error } = await supabase
+        .from("page_templates")
+        .insert({ page_count: pageCount })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pageTemplates"] });
+      queryClient.invalidateQueries({ queryKey: ["activePageTemplates"] });
+    },
+  });
+}
+
+export function useDeletePageTemplate() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("page_templates")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pageTemplates"] });
+      queryClient.invalidateQueries({ queryKey: ["activePageTemplates"] });
+    },
+  });
+}
+
+export function useTogglePageTemplate() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const { data, error } = await supabase
+        .from("page_templates")
+        .update({ is_active: isActive })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pageTemplates"] });
+      queryClient.invalidateQueries({ queryKey: ["activePageTemplates"] });
+    },
+  });
+}
+
 // Magazines
 export function useMagazines() {
   return useQuery({

@@ -383,6 +383,30 @@ export type Database = {
         }
         Relationships: []
       }
+      page_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          page_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_count: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

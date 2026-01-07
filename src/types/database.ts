@@ -10,7 +10,7 @@ export interface Issue {
   id: string;
   magazine_id: string;
   issue_number: number;
-  template_pages: 52 | 68;
+  template_pages: number;
   distribution_month: string;
   theme: string;
   design_start_date: string;

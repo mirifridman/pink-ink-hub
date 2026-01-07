@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface PagePickerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  templatePages: 52 | 68;
+  templatePages: number;
   occupiedPages: number[];
   selectedPages: number[];
   onSelect: (pages: number[]) => void;
