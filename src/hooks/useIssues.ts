@@ -588,3 +588,30 @@ export function useAllProfiles() {
     },
   });
 }
+
+// User invitations
+interface UserInvitation {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: "admin" | "designer" | "editor" | "publisher";
+  invited_by: string;
+  created_at: string;
+  expires_at: string;
+  status: "pending" | "accepted" | "expired";
+}
+
+export function useUserInvitations() {
+  return useQuery({
+    queryKey: ["userInvitations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_invitations")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as UserInvitation[];
+    },
+  });
+}

@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, email, fullName, role, password } = await req.json();
+    const { action, email, fullName, role, password, invitationId } = await req.json();
 
     if (action === "create") {
       if (!email || !role) {
@@ -95,6 +95,145 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, user: { id: newUser.user.id, email } }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "invite") {
+      if (!email || !role) {
+        return new Response(JSON.stringify({ error: "Email and role are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check if user already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const userExists = existingUsers?.users?.some(u => u.email === email);
+      
+      if (userExists) {
+        return new Response(JSON.stringify({ error: "משתמש עם אימייל זה כבר קיים במערכת" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Create invitation record
+      const { data: invitation, error: inviteError } = await supabaseAdmin
+        .from("user_invitations")
+        .insert({
+          email,
+          full_name: fullName || null,
+          role,
+          invited_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (inviteError) {
+        if (inviteError.code === "23505") {
+          return new Response(JSON.stringify({ error: "כבר נשלחה הזמנה לאימייל זה" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ error: inviteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Send magic link invitation
+      const { error: magicLinkError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: fullName || "", invitation_id: invitation.id },
+      });
+
+      if (magicLinkError) {
+        // Remove the invitation if magic link fails
+        await supabaseAdmin.from("user_invitations").delete().eq("id", invitation.id);
+        return new Response(JSON.stringify({ error: magicLinkError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, invitation }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "cancel_invitation") {
+      if (!invitationId) {
+        return new Response(JSON.stringify({ error: "Invitation ID is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: deleteError } = await supabaseAdmin
+        .from("user_invitations")
+        .delete()
+        .eq("id", invitationId);
+
+      if (deleteError) {
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "resend_invitation") {
+      if (!invitationId) {
+        return new Response(JSON.stringify({ error: "Invitation ID is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get invitation details
+      const { data: invitation, error: getError } = await supabaseAdmin
+        .from("user_invitations")
+        .select("*")
+        .eq("id", invitationId)
+        .single();
+
+      if (getError || !invitation) {
+        return new Response(JSON.stringify({ error: "Invitation not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Update expiration
+      await supabaseAdmin
+        .from("user_invitations")
+        .update({ 
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "pending"
+        })
+        .eq("id", invitationId);
+
+      // Resend magic link
+      const { error: magicLinkError } = await supabaseAdmin.auth.admin.inviteUserByEmail(invitation.email, {
+        data: { full_name: invitation.full_name || "", invitation_id: invitation.id },
+      });
+
+      if (magicLinkError) {
+        return new Response(JSON.stringify({ error: magicLinkError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { 
   useMagazines, 
   useCreateMagazine, 
@@ -11,9 +12,10 @@ import {
   useAllUsersWithRoles,
   useAllProfiles,
   useAssignRole,
-  useRemoveRole
+  useRemoveRole,
+  useUserInvitations
 } from "@/hooks/useIssues";
-import { Plus, Trash2, BookOpen, Users, UserPlus } from "lucide-react";
+import { Plus, Trash2, BookOpen, Users, UserPlus, Mail, RefreshCw, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -43,7 +45,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { he } from "date-fns/locale";
 
 const roleLabels: Record<string, string> = {
   admin: "מנהל",
@@ -70,6 +80,7 @@ export default function Settings() {
   const { data: magazines, isLoading: isLoadingMagazines } = useMagazines();
   const { data: usersWithRoles, isLoading: isLoadingUsers } = useAllUsersWithRoles();
   const { data: allProfiles } = useAllProfiles();
+  const { data: invitations, isLoading: isLoadingInvitations } = useUserInvitations();
   
   const createMagazine = useCreateMagazine();
   const deleteMagazine = useDeleteMagazine();
@@ -154,10 +165,9 @@ export default function Settings() {
 
       const response = await supabase.functions.invoke("manage-users", {
         body: {
-          action: "create",
+          action: "invite",
           email: newUserEmail,
           fullName: newUserName,
-          password: newUserPassword || undefined,
           role: newUserRole,
         },
       });
@@ -170,20 +180,81 @@ export default function Settings() {
         throw new Error(response.data.error);
       }
 
-      toast.success("המשתמש נוצר בהצלחה");
+      toast.success("ההזמנה נשלחה בהצלחה");
       setIsAddUserOpen(false);
       setNewUserEmail("");
       setNewUserName("");
       setNewUserPassword("");
       setNewUserRole("editor");
       
-      // Refresh the user lists
+      // Refresh the lists
       queryClient.invalidateQueries({ queryKey: ["allUsersWithRoles"] });
       queryClient.invalidateQueries({ queryKey: ["allProfiles"] });
+      queryClient.invalidateQueries({ queryKey: ["userInvitations"] });
     } catch (error: any) {
-      toast.error("שגיאה ביצירת המשתמש: " + error.message);
+      toast.error("שגיאה בשליחת ההזמנה: " + error.message);
     } finally {
       setIsCreatingUser(false);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("יש להתחבר מחדש");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "cancel_invitation",
+          invitationId,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success("ההזמנה בוטלה");
+      queryClient.invalidateQueries({ queryKey: ["userInvitations"] });
+    } catch (error: any) {
+      toast.error("שגיאה בביטול ההזמנה: " + error.message);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("יש להתחבר מחדש");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "resend_invitation",
+          invitationId,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success("ההזמנה נשלחה מחדש");
+      queryClient.invalidateQueries({ queryKey: ["userInvitations"] });
+    } catch (error: any) {
+      toast.error("שגיאה בשליחת ההזמנה: " + error.message);
     }
   };
 
@@ -276,9 +347,9 @@ export default function Settings() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>הוספת משתמש חדש</DialogTitle>
+                  <DialogTitle>הזמנת משתמש חדש</DialogTitle>
                   <DialogDescription>
-                    הזן את פרטי המשתמש החדש. המשתמש יקבל גישה למערכת לפי התפקיד שנבחר.
+                    הזן את פרטי המשתמש החדש. המשתמש יקבל הזמנה באימייל להצטרף למערכת.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -302,16 +373,6 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">סיסמה (אופציונלי - תיווצר אוטומטית אם לא תוזן)</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="********"
-                      value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>תפקיד</Label>
                     <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as typeof newUserRole)}>
                       <SelectTrigger>
@@ -331,13 +392,14 @@ export default function Settings() {
                     ביטול
                   </Button>
                   <Button onClick={handleCreateUser} disabled={isCreatingUser}>
-                    {isCreatingUser ? "יוצר..." : "צור משתמש"}
+                    <Mail className="w-4 h-4 ml-2" />
+                    {isCreatingUser ? "שולח..." : "שלח הזמנה"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="flex gap-2">
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="flex-1">
@@ -372,63 +434,138 @@ export default function Settings() {
               </Button>
             </div>
 
-            {isLoadingUsers ? (
-              <p className="text-muted-foreground text-sm">טוען...</p>
-            ) : usersWithRoles?.length === 0 ? (
-              <p className="text-muted-foreground text-sm">אין משתמשים עם תפקידים במערכת</p>
-            ) : (
-              <div className="space-y-2">
-                {usersWithRoles?.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="font-medium">{user.full_name || user.email || "משתמש ללא שם"}</span>
-                      <Select 
-                        value={user.role} 
-                        onValueChange={(v) => handleChangeRole(user.id, v as typeof selectedRole)}
+            <Tabs defaultValue="users" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="users">משתמשים פעילים</TabsTrigger>
+                <TabsTrigger value="invitations" className="relative">
+                  הזמנות ממתינות
+                  {invitations && invitations.length > 0 && (
+                    <Badge variant="secondary" className="mr-2 h-5 px-1.5 text-xs">
+                      {invitations.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="users">
+                {isLoadingUsers ? (
+                  <p className="text-muted-foreground text-sm">טוען...</p>
+                ) : usersWithRoles?.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">אין משתמשים עם תפקידים במערכת</p>
+                ) : (
+                  <div className="space-y-2">
+                    {usersWithRoles?.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
-                        <SelectTrigger className="w-28 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="editor">עורך</SelectItem>
-                          <SelectItem value="designer">מעצב</SelectItem>
-                          <SelectItem value="publisher">מפיץ</SelectItem>
-                          <SelectItem value="admin">מנהל</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>הסרת משתמש</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            האם אתה בטוח שברצונך להסיר את התפקיד של "{user.full_name || user.email}"?
-                            המשתמש לא יוכל לגשת למערכת.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>ביטול</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleRemoveUser(user.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <span className="font-medium">{user.full_name || "משתמש ללא שם"}</span>
+                            {user.email && (
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                            )}
+                          </div>
+                          <Select 
+                            value={user.role} 
+                            onValueChange={(v) => handleChangeRole(user.id, v as typeof selectedRole)}
                           >
-                            הסר
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <SelectTrigger className="w-28 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="editor">עורך</SelectItem>
+                              <SelectItem value="designer">מעצב</SelectItem>
+                              <SelectItem value="publisher">מפיץ</SelectItem>
+                              <SelectItem value="admin">מנהל</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>הסרת משתמש</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                האם אתה בטוח שברצונך להסיר את התפקיד של "{user.full_name || user.email}"?
+                                המשתמש לא יוכל לגשת למערכת.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>ביטול</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleRemoveUser(user.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                הסר
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                )}
+              </TabsContent>
+
+              <TabsContent value="invitations">
+                {isLoadingInvitations ? (
+                  <p className="text-muted-foreground text-sm">טוען...</p>
+                ) : !invitations || invitations.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>אין הזמנות ממתינות</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <span className="font-medium">{invitation.full_name || invitation.email}</span>
+                            <p className="text-sm text-muted-foreground">{invitation.email}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              נשלח {formatDistanceToNow(new Date(invitation.created_at), { locale: he, addSuffix: true })}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{roleLabels[invitation.role]}</Badge>
+                          <Badge variant="secondary" className="bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+                            ממתין לאישור
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleResendInvitation(invitation.id)}
+                            title="שלח שוב"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleCancelInvitation(invitation.id)}
+                            title="בטל הזמנה"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
