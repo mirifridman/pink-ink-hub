@@ -589,6 +589,37 @@ export function useAllProfiles() {
   });
 }
 
+// Pending users (registered but without role)
+export function usePendingUsers() {
+  return useQuery({
+    queryKey: ["pendingUsers"],
+    queryFn: async () => {
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, created_at")
+        .order("created_at", { ascending: false });
+      if (profilesError) throw profilesError;
+
+      // Get all user_ids that have roles
+      const { data: usersWithRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id");
+      if (rolesError) throw rolesError;
+
+      const userIdsWithRoles = new Set(usersWithRoles.map(u => u.user_id));
+
+      // Filter profiles without roles
+      return profiles.filter(p => !userIdsWithRoles.has(p.id)) as { 
+        id: string; 
+        full_name: string | null; 
+        email: string | null;
+        created_at: string;
+      }[];
+    },
+  });
+}
+
 // User invitations
 interface UserInvitation {
   id: string;
