@@ -366,6 +366,43 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "reset_password") {
+      const { userId, newPassword } = await req.json();
+      
+      if (!userId || !newPassword) {
+        return new Response(JSON.stringify({ error: "User ID and new password are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return new Response(JSON.stringify({ error: "הסיסמה חייבת להכיל לפחות 6 תווים" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Update user password using admin API
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: newPassword,
+      });
+
+      if (updateError) {
+        return new Response(JSON.stringify({ error: updateError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Password reset for user:", userId);
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

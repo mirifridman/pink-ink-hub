@@ -16,7 +16,7 @@ import {
 import { 
   Plus, Trash2, Users, UserPlus, Clock, Search, 
   Copy, MessageCircle, Link2, CheckCircle, X, RefreshCw,
-  Shield, Palette, Edit3, Send, UserCheck, Hourglass
+  Shield, Palette, Edit3, Send, UserCheck, Hourglass, KeyRound
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +97,12 @@ export default function UsersPage() {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [invitationLink, setInvitationLink] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  
+  // Reset password state
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [resetPasswordUserName, setResetPasswordUserName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   
   const queryClient = useQueryClient();
   
@@ -269,6 +275,51 @@ export default function UsersPage() {
     setShowLinkModal(true);
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPasswordUserId || !newPassword) {
+      toast.error("יש להזין סיסמה חדשה");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("הסיסמה חייבת להכיל לפחות 6 תווים");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("יש להתחבר מחדש");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "reset_password",
+          userId: resetPasswordUserId,
+          newPassword,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success(`הסיסמה של ${resetPasswordUserName} עודכנה בהצלחה`);
+      setResetPasswordUserId(null);
+      setNewPassword("");
+    } catch (error: any) {
+      toast.error("שגיאה באיפוס הסיסמה: " + error.message);
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const resetForm = () => {
     setNewUserEmail("");
     setNewUserName("");
@@ -333,6 +384,19 @@ export default function UsersPage() {
               </SelectItem>
             </SelectContent>
           </Select>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            onClick={() => {
+              setResetPasswordUserId(user.id);
+              setResetPasswordUserName(user.full_name || user.email || "");
+            }}
+            title="איפוס סיסמה"
+          >
+            <KeyRound className="w-4 h-4" />
+          </Button>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -757,6 +821,50 @@ export default function UsersPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => { setShowLinkModal(false); resetForm(); }}>
               סגור
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Modal */}
+      <Dialog open={!!resetPasswordUserId} onOpenChange={(open) => { if (!open) { setResetPasswordUserId(null); setNewPassword(""); } }}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-amber-500" />
+              איפוס סיסמה
+            </DialogTitle>
+            <DialogDescription>
+              הגדרת סיסמה חדשה עבור {resetPasswordUserName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">סיסמה חדשה</Label>
+              <Input
+                id="newPassword"
+                type="text"
+                placeholder="לפחות 6 תווים"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground">
+                הסיסמה צריכה להכיל לפחות 6 תווים. מומלץ לבקש מהמשתמש להחליף סיסמה לאחר הכניסה.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => { setResetPasswordUserId(null); setNewPassword(""); }}>
+              ביטול
+            </Button>
+            <Button 
+              onClick={handleResetPassword} 
+              disabled={isResettingPassword || newPassword.length < 6} 
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <KeyRound className="w-4 h-4 ml-2" />
+              {isResettingPassword ? "מאפס..." : "אפס סיסמה"}
             </Button>
           </DialogFooter>
         </DialogContent>
