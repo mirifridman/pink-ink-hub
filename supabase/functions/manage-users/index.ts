@@ -54,8 +54,112 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const body = await req.json();
+    const { action, email, fullName, role, password, invitationId, userId } = body;
 
-    const { action, email, fullName, role, password, invitationId } = await req.json();
+    // Action for magic link role assignment (no admin check needed for self-assignment)
+    if (action === "assign_role_for_magic_link") {
+      if (!userId || !role) {
+        return new Response(JSON.stringify({ error: "User ID and role are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Assign role
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .upsert({ 
+          user_id: userId, 
+          role: role 
+        }, { 
+          onConflict: "user_id" 
+        });
+
+      if (roleError) {
+        console.error("Error assigning role:", roleError);
+        return new Response(JSON.stringify({ error: roleError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Assigned role via magic link:", userId, role);
+
+      return new Response(JSON.stringify({ success: true, role }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action to create magic link token
+    if (action === "create_magic_link_token") {
+      if (!email || !role) {
+        return new Response(JSON.stringify({ error: "Email and role are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check if user already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const userExists = existingUsers?.users?.some(u => u.email === email);
+      
+      if (userExists) {
+        return new Response(JSON.stringify({ error: "משתמש עם אימייל זה כבר קיים במערכת" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Generate unique token
+      const token = crypto.randomUUID() + "-" + Date.now();
+      
+      // Expiration: 48 hours from now
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+
+      // Get admin name
+      const { data: adminProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+
+      // Save token to database
+      const { data: tokenData, error: tokenError } = await supabaseAdmin
+        .from("magic_link_tokens")
+        .insert({
+          email,
+          token,
+          role,
+          full_name: fullName || null,
+          invited_by: user.id,
+          invited_by_name: adminProfile?.full_name || user.email,
+          expires_at: expiresAt.toISOString(),
+        })
+        .select()
+        .single();
+
+      if (tokenError) {
+        console.error("Error creating magic link token:", tokenError);
+        return new Response(JSON.stringify({ error: tokenError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Created magic link token:", tokenData.id);
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        token: tokenData.token,
+        tokenData
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "create") {
       if (!email || !role) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, User, ChevronDown, UserCircle } from "lucide-react";
+import { LogOut, User, ChevronDown, UserCircle, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -99,6 +99,13 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          onClick={() => navigate("/profile")}
+          className="flex items-center gap-2 cursor-pointer text-right flex-row-reverse"
+        >
+          <Settings className="w-4 h-4" />
+          <span>הגדרות פרופיל</span>
+        </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={handleSwitchUser}
           className="flex items-center gap-2 cursor-pointer text-right flex-row-reverse"

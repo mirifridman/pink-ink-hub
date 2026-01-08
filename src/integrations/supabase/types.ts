@@ -455,6 +455,48 @@ export type Database = {
         }
         Relationships: []
       }
+      magic_link_tokens: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string
+          full_name: string | null
+          id: string
+          invited_by: string | null
+          invited_by_name: string | null
+          role: string
+          token: string
+          used: boolean | null
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at: string
+          full_name?: string | null
+          id?: string
+          invited_by?: string | null
+          invited_by_name?: string | null
+          role: string
+          token: string
+          used?: boolean | null
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invited_by?: string | null
+          invited_by_name?: string | null
+          role?: string
+          token?: string
+          used?: boolean | null
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       page_templates: {
         Row: {
           created_at: string
@@ -782,6 +824,39 @@ export type Database = {
           invited_by?: string
           role?: string
           status?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          browser_notifications: boolean | null
+          created_at: string | null
+          email_notifications: boolean | null
+          id: string
+          remember_me: boolean | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          browser_notifications?: boolean | null
+          created_at?: string | null
+          email_notifications?: boolean | null
+          id?: string
+          remember_me?: boolean | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          browser_notifications?: boolean | null
+          created_at?: string | null
+          email_notifications?: boolean | null
+          id?: string
+          remember_me?: boolean | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
