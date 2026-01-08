@@ -164,7 +164,7 @@ export default function Lineup() {
                     <th className="p-4 text-right font-medium text-muted-foreground w-20">עמודים</th>
                     <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-24">מקור</th>
+                    
                     <th className="p-4 text-right font-medium text-muted-foreground w-12">💬</th>
                     <th className="p-4 text-right font-medium text-muted-foreground w-28">דדליין</th>
                     <th className="p-4 text-center font-medium text-muted-foreground w-16">📄</th>
@@ -223,19 +223,6 @@ export default function Lineup() {
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          {canEdit ? (
-                            <EditableTextField
-                              lineupItemId={item.id}
-                              field="source"
-                              initialValue={item.source || ""}
-                              placeholder="מקור"
-                              onUpdate={() => refetchLineup()}
-                            />
-                          ) : (
-                            <span className="text-sm text-muted-foreground">{item.source || "-"}</span>
                           )}
                         </td>
                         <td className="p-4">
