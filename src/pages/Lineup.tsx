@@ -189,7 +189,7 @@ export default function Lineup() {
                       אין פריטים בליינאפ של גליון זה.
                     </div>
                   ) : (
-                    <table className="w-full">
+                    <table className="w-full" dir="rtl">
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
