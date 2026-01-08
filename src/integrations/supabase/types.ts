@@ -93,6 +93,7 @@ export type Database = {
           assignment_sent: boolean | null
           assignment_sent_by: string | null
           assignment_sent_date: string | null
+          content_type: string | null
           created_at: string
           description: string | null
           designer_notes: string | null
@@ -111,6 +112,7 @@ export type Database = {
           assignment_sent?: boolean | null
           assignment_sent_by?: string | null
           assignment_sent_date?: string | null
+          content_type?: string | null
           created_at?: string
           description?: string | null
           designer_notes?: string | null
@@ -129,6 +131,7 @@ export type Database = {
           assignment_sent?: boolean | null
           assignment_sent_by?: string | null
           assignment_sent_date?: string | null
+          content_type?: string | null
           created_at?: string
           description?: string | null
           designer_notes?: string | null
@@ -349,6 +352,7 @@ export type Database = {
           assignment_sent_by: string | null
           assignment_sent_date: string | null
           content: string
+          content_type: string | null
           created_at: string
           designer_notes: string | null
           files_ready: boolean
@@ -369,6 +373,7 @@ export type Database = {
           assignment_sent_by?: string | null
           assignment_sent_date?: string | null
           content: string
+          content_type?: string | null
           created_at?: string
           designer_notes?: string | null
           files_ready?: boolean
@@ -389,6 +394,7 @@ export type Database = {
           assignment_sent_by?: string | null
           assignment_sent_date?: string | null
           content?: string
+          content_type?: string | null
           created_at?: string
           designer_notes?: string | null
           files_ready?: boolean
