@@ -18,6 +18,8 @@ import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import Permissions from "./pages/Permissions";
 import NotFound from "./pages/NotFound";
+import MagicLink from "./pages/MagicLink";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/magic" element={<MagicLink />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Dashboard />
@@ -83,6 +86,11 @@ const App = () => (
             <Route path="/permissions" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <Permissions />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

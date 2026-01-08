@@ -184,9 +184,10 @@ export default function UsersPage() {
         return;
       }
 
+      // Use the new magic link token system
       const response = await supabase.functions.invoke("manage-users", {
         body: {
-          action: "create_invitation_link",
+          action: "create_magic_link_token",
           email: newUserEmail,
           fullName: newUserName,
           role: newUserRole,
@@ -201,13 +202,14 @@ export default function UsersPage() {
         throw new Error(response.data.error);
       }
 
-      const invitationId = response.data.token || response.data.invitation?.id;
-      if (!invitationId) {
-        throw new Error("לא התקבל מזהה הזמנה");
+      const token = response.data.token;
+      if (!token) {
+        throw new Error("לא התקבל טוקן");
       }
       
-      const signupUrl = `${window.location.origin}/auth?invite=${invitationId}&email=${encodeURIComponent(newUserEmail)}&name=${encodeURIComponent(newUserName || '')}&role=${encodeURIComponent(newUserRole)}`;
-      setInvitationLink(signupUrl);
+      // Build magic link URL
+      const magicLinkUrl = `${window.location.origin}/magic?token=${token}`;
+      setInvitationLink(magicLinkUrl);
       setShowLinkModal(true);
       setIsAddUserOpen(false);
       
