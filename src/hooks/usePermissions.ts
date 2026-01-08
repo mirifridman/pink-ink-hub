@@ -8,6 +8,9 @@ export type PermissionKey =
   | "manage_issues"
   | "view_lineup"
   | "manage_lineup"
+  | "edit_lineup_text_ready"
+  | "edit_lineup_files_ready"
+  | "edit_lineup_is_designed"
   | "view_suppliers"
   | "manage_suppliers"
   | "view_team"
@@ -35,6 +38,9 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   manage_issues: "ניהול גיליונות",
   view_lineup: "צפייה בליינאפ",
   manage_lineup: "ניהול ליינאפ",
+  edit_lineup_text_ready: "עדכון סטטוס טקסט בתיקייה",
+  edit_lineup_files_ready: "עדכון סטטוס קבצים בתיקייה",
+  edit_lineup_is_designed: "עדכון סטטוס מעוצב",
   view_suppliers: "צפייה בספקים",
   manage_suppliers: "ניהול ספקים",
   view_team: "צפייה בצוות",
@@ -62,6 +68,10 @@ export const PERMISSION_GROUPS: { name: string; permissions: PermissionKey[] }[]
   {
     name: "ליינאפ",
     permissions: ["view_lineup", "manage_lineup"],
+  },
+  {
+    name: "סטטוסים בליינאפ",
+    permissions: ["edit_lineup_text_ready", "edit_lineup_files_ready", "edit_lineup_is_designed"],
   },
   {
     name: "ספקים",
@@ -98,6 +108,7 @@ export const ROLE_LABELS: Record<string, string> = {
   editor: "עורך",
   designer: "מעצב",
   publisher: "צוות הוצאה לאור",
+  social: "רשתות חברתיות",
 };
 
 export function useRolePermissions() {

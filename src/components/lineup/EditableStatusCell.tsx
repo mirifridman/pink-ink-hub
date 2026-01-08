@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useHasPermission } from "@/hooks/usePermissions";
 
 interface EditableStatusCellProps {
   lineupItemId: string;
@@ -19,13 +19,16 @@ export function EditableStatusCell({
 }: EditableStatusCellProps) {
   const [isChecked, setIsChecked] = useState(initialValue);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { role } = useAuth();
 
-  // Permission check
+  // Permission check based on field
+  const canEditTextReady = useHasPermission("edit_lineup_text_ready");
+  const canEditFilesReady = useHasPermission("edit_lineup_files_ready");
+  const canEditIsDesigned = useHasPermission("edit_lineup_is_designed");
+
   const canEdit = (() => {
-    if (role === "admin") return true;
-    if (role === "designer" && field === "is_designed") return true;
-    if (role === "editor" && field !== "is_designed") return true;
+    if (field === "text_ready") return canEditTextReady;
+    if (field === "files_ready") return canEditFilesReady;
+    if (field === "is_designed") return canEditIsDesigned;
     return false;
   })();
 
