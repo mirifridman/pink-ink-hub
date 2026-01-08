@@ -31,7 +31,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer"]}>
+              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
                 <Dashboard />
               </ProtectedRoute>
             } />
