@@ -5,7 +5,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   TableProperties, 
   FileText,
@@ -15,7 +16,8 @@ import {
   Send,
   Bell,
   Check,
-  MessageSquare
+  MessageSquare,
+  LayoutGrid
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIssues, useLineupItems } from "@/hooks/useIssues";
@@ -26,7 +28,9 @@ import { ReminderStatusIcon } from "@/components/lineup/ReminderStatusIcon";
 import { AssignmentButton } from "@/components/lineup/AssignmentButton";
 import { EditableStatusCell } from "@/components/lineup/EditableStatusCell";
 import { EditableTextField } from "@/components/lineup/EditableTextField";
-import { LineupComments } from "@/components/lineup/LineupComments";
+import { CommentsSidePanel } from "@/components/lineup/CommentsSidePanel";
+import { FlatplanView } from "@/components/lineup/FlatplanView";
+import { getContentTypeColor, getContentTypeLabel } from "@/components/lineup/ContentTypeSelect";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,8 +52,14 @@ const getStatusDisplay = (textReady: boolean, filesReady: boolean, isDesigned: b
 export default function Lineup() {
   const { data: issues, isLoading: issuesLoading } = useIssues();
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("table");
   const { hasPermission, user, role } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Side panel state
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemContent, setSelectedItemContent] = useState<string>("");
   
   const canManageReminders = hasPermission(["admin", "editor"]);
   const canEdit = role === "admin" || role === "editor";
@@ -74,260 +84,380 @@ export default function Lineup() {
   // Fetch comments count for each lineup item
   const [commentsCounts, setCommentsCounts] = useState<Record<string, number>>({});
   
+  const fetchCommentsCounts = async () => {
+    if (!lineupItems?.length) return;
+    const counts: Record<string, number> = {};
+    for (const item of lineupItems) {
+      const { count } = await supabase
+        .from("lineup_comments")
+        .select("*", { count: "exact", head: true })
+        .eq("lineup_item_id", item.id);
+      counts[item.id] = count || 0;
+    }
+    setCommentsCounts(counts);
+  };
+
   useEffect(() => {
-    const fetchCommentsCounts = async () => {
-      if (!lineupItems?.length) return;
-      const counts: Record<string, number> = {};
-      for (const item of lineupItems) {
-        const { count } = await supabase
-          .from("lineup_comments")
-          .select("*", { count: "exact", head: true })
-          .eq("lineup_item_id", item.id);
-        counts[item.id] = count || 0;
-      }
-      setCommentsCounts(counts);
-    };
     fetchCommentsCounts();
   }, [lineupItems]);
+
+  const handleOpenComments = (itemId: string, content: string) => {
+    setSelectedItemId(itemId);
+    setSelectedItemContent(content);
+    setSidePanelOpen(true);
+  };
 
   const isLoading = issuesLoading || lineupLoading;
 
   return (
-    <AppLayout>
-      <div className="space-y-6 animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-rubik font-bold text-foreground flex items-center gap-3">
-              <TableProperties className="w-8 h-8 text-accent" />
-              ליינאפ
-            </h1>
-            <p className="text-muted-foreground mt-1">ניהול תוכן הגליון</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Select value={effectiveIssueId} onValueChange={setSelectedIssueId}>
-              <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="בחר גליון" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeIssues.map((issue) => (
-                  <SelectItem key={issue.id} value={issue.id}>
-                    {issue.magazine?.name} - גליון {issue.issue_number} ({issue.theme})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-6 text-sm flex-wrap">
-          <span className="text-muted-foreground">מקרא:</span>
-          <div className="flex items-center gap-4 flex-wrap">
-            <StatusBadge status="critical">היום</StatusBadge>
-            <StatusBadge status="urgent">יומיים</StatusBadge>
-            <StatusBadge status="warning">ממתין</StatusBadge>
-            <StatusBadge status="success">מאושר</StatusBadge>
-          </div>
-          <div className="flex items-center gap-3 text-muted-foreground border-r pr-4">
-            <div className="flex items-center gap-1">
-              <Send className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs">הקצאה נשלחה</span>
+    <TooltipProvider>
+      <AppLayout>
+        <div className="space-y-6 animate-fade-in-up">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-rubik font-bold text-foreground flex items-center gap-3">
+                <TableProperties className="w-8 h-8 text-accent" />
+                ליינאפ
+              </h1>
+              <p className="text-muted-foreground mt-1">ניהול תוכן הגליון</p>
             </div>
-            <div className="flex items-center gap-1">
-              <Bell className="w-4 h-4 text-orange-500" />
-              <span className="text-xs">תזכורת נשלחה</span>
+            <div className="flex items-center gap-4">
+              <Select value={effectiveIssueId} onValueChange={setSelectedIssueId}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="בחר גליון" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeIssues.map((issue) => (
+                    <SelectItem key={issue.id} value={issue.id}>
+                      {issue.magazine?.name} - גליון {issue.issue_number} ({issue.theme})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
 
-        {/* Lineup Table */}
-        <NeonCard>
-          <NeonCardContent className="p-0 overflow-x-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          {/* Legend */}
+          <div className="flex items-center gap-6 text-sm flex-wrap">
+            <span className="text-muted-foreground">מקרא:</span>
+            <div className="flex items-center gap-4 flex-wrap">
+              <StatusBadge status="critical">היום</StatusBadge>
+              <StatusBadge status="urgent">יומיים</StatusBadge>
+              <StatusBadge status="warning">ממתין</StatusBadge>
+              <StatusBadge status="success">מאושר</StatusBadge>
+            </div>
+            <div className="flex items-center gap-3 text-muted-foreground border-r pr-4">
+              <div className="flex items-center gap-1">
+                <Send className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs">הקצאה נשלחה</span>
               </div>
-            ) : !effectiveIssueId ? (
-              <div className="text-center py-12 text-muted-foreground">
-                אין גליונות פעילים. צור גליון חדש בעמוד הגיליונות.
+              <div className="flex items-center gap-1">
+                <Bell className="w-4 h-4 text-orange-500" />
+                <span className="text-xs">תזכורת נשלחה</span>
               </div>
-            ) : lineupItems?.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                אין פריטים בליינאפ של גליון זה.
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-20">עמודים</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
-                    
-                    <th className="p-4 text-right font-medium text-muted-foreground w-12">💬</th>
-                    <th className="p-4 text-right font-medium text-muted-foreground w-28">דדליין</th>
-                    <th className="p-4 text-center font-medium text-muted-foreground w-16">📄</th>
-                    <th className="p-4 text-center font-medium text-muted-foreground w-16">📁</th>
-                    <th className="p-4 text-center font-medium text-muted-foreground w-16">🎨</th>
-                    {canManageReminders && (
-                      <th className="p-4 text-right font-medium text-muted-foreground w-28">הקצאה</th>
-                    )}
-                    {canManageReminders && (
-                      <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineupItems?.map((item) => {
-                    const daysLeft = getDaysLeft(item);
-                    const contentStatus = getStatusDisplay(item.text_ready, item.files_ready, false);
-                    const designStatus = getStatusDisplay(item.is_designed, item.is_designed, item.is_designed);
-                    const pages = item.page_start === item.page_end 
-                      ? String(item.page_start) 
-                      : `${item.page_start}-${item.page_end}`;
-                    
-                    return (
-                      <tr
-                        key={item.id}
-                        className={cn(
-                          "border-b last:border-b-0 hover:bg-muted/30 transition-colors group",
-                          daysLeft <= 0 && "bg-red-500/5",
-                          daysLeft > 0 && daysLeft <= 2 && "bg-orange-500/5"
-                        )}
-                      >
-                        <td className="p-4">
-                          {item.supplier && (
-                            <ReminderStatusIcon lineupItemId={item.id} />
+            </div>
+          </div>
+
+          {/* Tabs for Table/Flatplan views */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="table" className="gap-2">
+                <TableProperties className="w-4 h-4" />
+                טבלה
+              </TabsTrigger>
+              <TabsTrigger value="flatplan" className="gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                תצוגה ויזואלית
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="table" className="mt-4">
+              {/* Lineup Table */}
+              <NeonCard>
+                <NeonCardContent className="p-0 overflow-x-auto">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : !effectiveIssueId ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      אין גליונות פעילים. צור גליון חדש בעמוד הגיליונות.
+                    </div>
+                  ) : lineupItems?.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      אין פריטים בליינאפ של גליון זה.
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
+                          <th className="p-4 text-right font-medium text-muted-foreground w-20">עמודים</th>
+                          <th className="p-4 text-right font-medium text-muted-foreground w-24">סוג</th>
+                          <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
+                          <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
+                          <th className="p-4 text-right font-medium text-muted-foreground w-12">
+                            <Tooltip>
+                              <TooltipTrigger>💬</TooltipTrigger>
+                              <TooltipContent>הערות</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="p-4 text-right font-medium text-muted-foreground w-28">דדליין</th>
+                          <th className="p-4 text-center font-medium text-muted-foreground w-16">
+                            <Tooltip>
+                              <TooltipTrigger>📄</TooltipTrigger>
+                              <TooltipContent>טקסט מוכן</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="p-4 text-center font-medium text-muted-foreground w-16">
+                            <Tooltip>
+                              <TooltipTrigger>📁</TooltipTrigger>
+                              <TooltipContent>קבצים מוכנים</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          <th className="p-4 text-center font-medium text-muted-foreground w-16">
+                            <Tooltip>
+                              <TooltipTrigger>🎨</TooltipTrigger>
+                              <TooltipContent>עיצוב הושלם</TooltipContent>
+                            </Tooltip>
+                          </th>
+                          {canManageReminders && (
+                            <th className="p-4 text-right font-medium text-muted-foreground w-28">הקצאה</th>
                           )}
-                        </td>
-                        <td className="p-4 text-muted-foreground">{pages}</td>
-                        <td className="p-4">
-                          {canEdit ? (
-                            <EditableTextField
-                              lineupItemId={item.id}
-                              field="content"
-                              initialValue={item.content}
-                              placeholder="תוכן"
-                              onUpdate={() => refetchLineup()}
-                            />
-                          ) : (
-                            <span className="font-medium">{item.content}</span>
+                          {canManageReminders && (
+                            <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
                           )}
-                        </td>
-                        <td className="p-4">
-                          {item.supplier ? (
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm">{item.supplier.name}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="gap-1 relative">
-                                <MessageSquare className="w-4 h-4" />
-                                {(commentsCounts[item.id] || 0) > 0 && (
-                                  <Badge variant="secondary" className="h-5 min-w-[20px] text-xs">
-                                    {commentsCounts[item.id]}
-                                  </Badge>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lineupItems?.map((item) => {
+                          const daysLeft = getDaysLeft(item);
+                          const contentStatus = getStatusDisplay(item.text_ready, item.files_ready, false);
+                          const designStatus = getStatusDisplay(item.is_designed, item.is_designed, item.is_designed);
+                          const pages = item.page_start === item.page_end 
+                            ? String(item.page_start) 
+                            : `${item.page_start}-${item.page_end}`;
+                          const hasComments = (commentsCounts[item.id] || 0) > 0;
+                          
+                          return (
+                            <tr
+                              key={item.id}
+                              className={cn(
+                                "border-b last:border-b-0 hover:bg-muted/30 transition-colors group",
+                                daysLeft <= 0 && "bg-red-500/5",
+                                daysLeft > 0 && daysLeft <= 2 && "bg-orange-500/5"
+                              )}
+                            >
+                              <td className="p-4">
+                                {item.supplier && (
+                                  <ReminderStatusIcon lineupItemId={item.id} />
                                 )}
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <LineupComments lineupItemId={item.id} contentTitle={item.content} />
-                            </DialogContent>
-                          </Dialog>
-                        </td>
-                        <td className="p-4">
-                          {selectedIssue?.sketch_close_date && (
-                            <StatusBadge status={getDeadlineStatus(daysLeft)} pulse={daysLeft <= 0}>
-                              {format(new Date(selectedIssue.sketch_close_date), "dd/MM/yyyy")}
-                            </StatusBadge>
-                          )}
-                        </td>
-                        <td className="p-4 text-center">
-                          <EditableStatusCell
-                            lineupItemId={item.id}
-                            field="text_ready"
-                            initialValue={item.text_ready}
-                            onUpdate={() => refetchLineup()}
-                          />
-                        </td>
-                        <td className="p-4 text-center">
-                          <EditableStatusCell
-                            lineupItemId={item.id}
-                            field="files_ready"
-                            initialValue={item.files_ready}
-                            onUpdate={() => refetchLineup()}
-                          />
-                        </td>
-                        <td className="p-4 text-center">
-                          <EditableStatusCell
-                            lineupItemId={item.id}
-                            field="is_designed"
-                            initialValue={item.is_designed}
-                            onUpdate={() => refetchLineup()}
-                          />
-                        </td>
-                        {canManageReminders && (
-                          <td className="p-4">
-                            {item.supplier && selectedIssue && (
-                              <AssignmentButton
-                                lineupItemId={item.id}
-                                supplierId={item.supplier_id || null}
-                                supplierName={item.supplier?.name || null}
-                                supplierPhone={item.supplier?.phone || null}
-                                content={item.content}
-                                pageStart={item.page_start}
-                                pageEnd={item.page_end}
-                                magazineName={selectedIssue.magazine?.name || "מגזין"}
-                                issueNumber={selectedIssue.issue_number}
-                                issueTheme={selectedIssue.theme}
-                                issueId={selectedIssue.id}
-                                designStartDate={selectedIssue.design_start_date}
-                                editorName={"העורך"}
-                                assignmentSent={(item as any).assignment_sent}
-                                assignmentSentDate={(item as any).assignment_sent_date}
-                              />
-                            )}
-                          </td>
-                        )}
-                        {canManageReminders && (
-                          <td className="p-4">
-                            {item.supplier && selectedIssue && (
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <LineupRowActions
-                                  lineupItemId={item.id}
-                                  supplierId={item.supplier_id || null}
-                                  supplierName={item.supplier?.name || null}
-                                  supplierPhone={item.supplier?.phone || null}
-                                  content={item.content}
-                                  pageStart={item.page_start}
-                                  pageEnd={item.page_end}
-                                  magazineName={selectedIssue.magazine?.name || "מגזין"}
-                                  issueNumber={selectedIssue.issue_number}
-                                  issueTheme={selectedIssue.theme}
-                                  issueId={selectedIssue.id}
-                                  designStartDate={selectedIssue.design_start_date}
-                                  editorName={"העורך"}
-                                />
-                              </div>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </NeonCardContent>
-        </NeonCard>
-      </div>
-    </AppLayout>
+                              </td>
+                              <td className="p-4 text-muted-foreground">{pages}</td>
+                              <td className="p-4">
+                                {(item as any).content_type ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <div className={cn("w-3 h-3 rounded-sm", getContentTypeColor((item as any).content_type))} />
+                                    <span className="text-xs">{getContentTypeLabel((item as any).content_type)}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                {canEdit ? (
+                                  <EditableTextField
+                                    lineupItemId={item.id}
+                                    field="content"
+                                    initialValue={item.content}
+                                    placeholder="תוכן"
+                                    onUpdate={() => refetchLineup()}
+                                  />
+                                ) : (
+                                  <span className="font-medium">{item.content}</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                {item.supplier ? (
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm">{item.supplier.name}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="gap-1 relative"
+                                      onClick={() => handleOpenComments(item.id, item.content)}
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                      {hasComments && (
+                                        <>
+                                          <Badge variant="secondary" className="h-5 min-w-[20px] text-xs">
+                                            {commentsCounts[item.id]}
+                                          </Badge>
+                                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-pink-500 rounded-full animate-pulse" />
+                                        </>
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>לחץ לצפייה בהערות</TooltipContent>
+                                </Tooltip>
+                              </td>
+                              <td className="p-4">
+                                {selectedIssue?.sketch_close_date && (
+                                  <StatusBadge status={getDeadlineStatus(daysLeft)} pulse={daysLeft <= 0}>
+                                    {format(new Date(selectedIssue.sketch_close_date), "dd/MM/yyyy")}
+                                  </StatusBadge>
+                                )}
+                              </td>
+                              <td className="p-4 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div>
+                                      <EditableStatusCell
+                                        lineupItemId={item.id}
+                                        field="text_ready"
+                                        initialValue={item.text_ready}
+                                        onUpdate={() => refetchLineup()}
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{item.text_ready ? "טקסט אושר" : "טקסט ממתין"}</TooltipContent>
+                                </Tooltip>
+                              </td>
+                              <td className="p-4 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div>
+                                      <EditableStatusCell
+                                        lineupItemId={item.id}
+                                        field="files_ready"
+                                        initialValue={item.files_ready}
+                                        onUpdate={() => refetchLineup()}
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{item.files_ready ? "קבצים התקבלו" : "קבצים ממתינים"}</TooltipContent>
+                                </Tooltip>
+                              </td>
+                              <td className="p-4 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div>
+                                      <EditableStatusCell
+                                        lineupItemId={item.id}
+                                        field="is_designed"
+                                        initialValue={item.is_designed}
+                                        onUpdate={() => refetchLineup()}
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{item.is_designed ? "עיצוב הושלם" : "עיצוב בהמתנה"}</TooltipContent>
+                                </Tooltip>
+                              </td>
+                              {canManageReminders && (
+                                <td className="p-4">
+                                  {item.supplier && selectedIssue && (
+                                    <AssignmentButton
+                                      lineupItemId={item.id}
+                                      supplierId={item.supplier_id || null}
+                                      supplierName={item.supplier?.name || null}
+                                      supplierPhone={item.supplier?.phone || null}
+                                      content={item.content}
+                                      pageStart={item.page_start}
+                                      pageEnd={item.page_end}
+                                      magazineName={selectedIssue.magazine?.name || "מגזין"}
+                                      issueNumber={selectedIssue.issue_number}
+                                      issueTheme={selectedIssue.theme}
+                                      issueId={selectedIssue.id}
+                                      designStartDate={selectedIssue.design_start_date}
+                                      editorName={"העורך"}
+                                      assignmentSent={(item as any).assignment_sent}
+                                      assignmentSentDate={(item as any).assignment_sent_date}
+                                    />
+                                  )}
+                                </td>
+                              )}
+                              {canManageReminders && (
+                                <td className="p-4">
+                                  {item.supplier && selectedIssue && (
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <LineupRowActions
+                                        lineupItemId={item.id}
+                                        supplierId={item.supplier_id || null}
+                                        supplierName={item.supplier?.name || null}
+                                        supplierPhone={item.supplier?.phone || null}
+                                        content={item.content}
+                                        pageStart={item.page_start}
+                                        pageEnd={item.page_end}
+                                        magazineName={selectedIssue.magazine?.name || "מגזין"}
+                                        issueNumber={selectedIssue.issue_number}
+                                        issueTheme={selectedIssue.theme}
+                                        issueId={selectedIssue.id}
+                                        designStartDate={selectedIssue.design_start_date}
+                                        editorName={"העורך"}
+                                      />
+                                    </div>
+                                  )}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </NeonCardContent>
+              </NeonCard>
+            </TabsContent>
+
+            <TabsContent value="flatplan" className="mt-4">
+              <NeonCard>
+                <NeonCardContent className="p-6">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : !effectiveIssueId || !selectedIssue ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      אין גליונות פעילים. צור גליון חדש בעמוד הגיליונות.
+                    </div>
+                  ) : (
+                    <FlatplanView 
+                      lineupItems={(lineupItems || []).map(item => ({
+                        id: item.id,
+                        page_start: item.page_start,
+                        page_end: item.page_end,
+                        content: item.content,
+                        content_type: (item as any).content_type,
+                      }))}
+                      templatePages={selectedIssue.template_pages}
+                      onUpdate={() => refetchLineup()}
+                    />
+                  )}
+                </NeonCardContent>
+              </NeonCard>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Comments Side Panel */}
+        <CommentsSidePanel
+          open={sidePanelOpen}
+          onOpenChange={setSidePanelOpen}
+          lineupItemId={selectedItemId}
+          contentTitle={selectedItemContent}
+          onCommentCountChange={fetchCommentsCounts}
+        />
+      </AppLayout>
+    </TooltipProvider>
   );
 }

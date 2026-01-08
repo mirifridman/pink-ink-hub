@@ -10,6 +10,7 @@ import { MultiSupplierSelect } from "./MultiSupplierSelect";
 import { EditorSelect } from "./EditorSelect";
 import { IssueEditorsSection } from "./IssueEditorsSection";
 import { NewIssueData } from "./NewIssueModal";
+import { ContentTypeSelect } from "@/components/lineup/ContentTypeSelect";
 import { 
   useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
   useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
@@ -43,6 +44,7 @@ interface LineupBuilderProps {
 interface LineupRow {
   id: string;
   pages: number[];
+  contentType: string;
   content: string;
   supplierIds: string[];
   source: string;
@@ -109,6 +111,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       const rows = existingLineupItems.map((item) => ({
         id: item.id,
         pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
+        contentType: (item as any).content_type || "",
         content: item.content,
         supplierIds: item.supplier_id ? [item.supplier_id] : [],
         source: item.source || "",
@@ -142,6 +145,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       const copiedRows = sourceLineupItems.map((item, idx) => ({
         id: `copied-${idx}`,
         pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
+        contentType: (item as any).content_type || "",
         content: item.content,
         supplierIds: item.supplier_id ? [item.supplier_id] : [],
         source: item.source || "",
@@ -194,6 +198,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     const newRow: LineupRow = {
       id: `new-${Date.now()}`,
       pages: [],
+      contentType: "",
       content: "",
       supplierIds: [],
       source: "",
@@ -441,6 +446,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               page_start: sortedPages[0],
               page_end: sortedPages[sortedPages.length - 1],
               content: row.content,
+              content_type: row.contentType || null,
               supplier_id: row.supplierIds[0] || null,
               source: row.source || null,
               notes: row.notes || null,
@@ -615,9 +621,9 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             <TableRow>
               <TableHead className="w-10"></TableHead>
               <TableHead className="text-right w-24">עמוד</TableHead>
+              <TableHead className="text-right w-32">סוג תוכן</TableHead>
               <TableHead className="text-right">תוכן</TableHead>
               <TableHead className="text-right w-40">ספק</TableHead>
-              <TableHead className="text-right w-32">מקור</TableHead>
               <TableHead className="text-right w-32">הערות</TableHead>
               {assignedEditors.length > 0 && (
                 <TableHead className="text-right w-36">עורך אחראי</TableHead>
@@ -670,6 +676,14 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   </Button>
                 </TableCell>
                 <TableCell>
+                  <ContentTypeSelect
+                    value={row.contentType}
+                    onChange={(val) => updateRow(row.id, { contentType: val })}
+                    placeholder="בחר סוג"
+                    className="w-full"
+                  />
+                </TableCell>
+                <TableCell>
                   <Input
                     value={row.content}
                     onChange={(e) => updateRow(row.id, { content: e.target.value })}
@@ -680,13 +694,6 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   <MultiSupplierSelect
                     value={row.supplierIds}
                     onChange={(ids) => updateRow(row.id, { supplierIds: ids })}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    value={row.source}
-                    onChange={(e) => updateRow(row.id, { source: e.target.value })}
-                    placeholder="מקור"
                   />
                 </TableCell>
                 <TableCell>
