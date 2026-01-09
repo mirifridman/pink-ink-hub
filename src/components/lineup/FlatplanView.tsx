@@ -184,18 +184,21 @@ export function FlatplanView({ lineupItems, templatePages, onUpdate }: FlatplanV
         ))}
       </div>
 
-      {/* Spreads */}
-      <div className="space-y-4">
+      {/* Spreads - Multi-column responsive grid */}
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {spreads.map((spread, idx) => (
-          <div key={idx} className="flex justify-center gap-1">
-            {/* For RTL: right page first, then left */}
+          <div 
+            key={idx} 
+            className="flex justify-center gap-1 p-2 bg-muted/20 rounded-lg border border-muted/40"
+          >
+            {/* RTL: right page first (higher number), then left */}
             {spread.right && (
-              <div className="w-40">
+              <div className="w-32 lg:w-36">
                 {renderPage(spread.right)}
               </div>
             )}
             {spread.left && (
-              <div className={cn("w-40", !spread.right && "mx-auto")}>
+              <div className={cn("w-32 lg:w-36", !spread.right && "mx-auto")}>
                 {renderPage(spread.left)}
               </div>
             )}
