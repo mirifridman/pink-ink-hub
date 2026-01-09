@@ -3,6 +3,7 @@ import { UrgentItemsCard } from "@/components/dashboard/UrgentItemsCard";
 import { PendingTasksCard } from "@/components/dashboard/PendingTasksCard";
 import { ActiveIssuesCard } from "@/components/dashboard/ActiveIssuesCard";
 import { RemindersCard } from "@/components/dashboard/RemindersCard";
+import { LiveDateTime } from "@/components/LiveDateTime";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   useActiveIssues, 
@@ -85,7 +86,8 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <LiveDateTime />
           {countsLoading ? (
             <Skeleton className="h-48 col-span-full lg:col-span-1" />
           ) : (
@@ -96,7 +98,7 @@ export default function Dashboard() {
             />
           )}
           {issuesLoading ? (
-            <Skeleton className="h-48 col-span-full lg:col-span-1" />
+            <Skeleton className="h-48 col-span-full lg:col-span-2" />
           ) : (
             <ActiveIssuesCard issues={activeIssues || []} />
           )}

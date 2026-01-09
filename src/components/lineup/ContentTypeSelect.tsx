@@ -15,6 +15,7 @@ export const CONTENT_TYPES = [
   { value: "reader_feedback", label: "משוב קוראים", color: "bg-teal-500" },
   { value: "kids", label: "קטנים", color: "bg-purple-400" },
   { value: "editorial", label: "מערכתי", color: "bg-slate-600" },
+  { value: "story", label: "סיפור", color: "bg-indigo-400" },
 ] as const;
 
 export type ContentTypeValue = typeof CONTENT_TYPES[number]["value"];

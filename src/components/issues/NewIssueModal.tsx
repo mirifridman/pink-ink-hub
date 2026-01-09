@@ -33,7 +33,14 @@ export interface NewIssueData {
   print_date: Date;
   copy_lineup_from?: string;
   editor_ids: string[];
+  hebrew_month?: string;
 }
+
+const HEBREW_MONTHS = [
+  'תשרי', 'חשוון', 'כסלו', 'טבת', 'שבט', 'אדר',
+  'אדר א׳', 'אדר ב׳', 'ניסן', 'אייר', 'סיוון',
+  'תמוז', 'אב', 'אלול'
+];
 
 export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalProps) {
   const { user } = useAuth();
@@ -53,6 +60,11 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
   const [copyLineup, setCopyLineup] = useState(false);
   const [sourceIssueId, setSourceIssueId] = useState<string>("");
   const [selectedEditorIds, setSelectedEditorIds] = useState<string[]>([]);
+  const [hebrewMonth, setHebrewMonth] = useState<string>("");
+
+  // Get selected magazine
+  const selectedMagazine = magazines?.find(m => m.id === magazineId);
+  const isNiflaotKids = selectedMagazine?.name === 'נפלאות קידס';
 
   // Set default template when templates load
   useEffect(() => {
@@ -94,6 +106,7 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
       print_date: printDate!,
       copy_lineup_from: copyLineup ? sourceIssueId : undefined,
       editor_ids: selectedEditorIds,
+      hebrew_month: isNiflaotKids && hebrewMonth ? hebrewMonth : undefined,
     });
   };
 
@@ -119,6 +132,7 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
     setCopyLineup(false);
     setSourceIssueId("");
     setSelectedEditorIds([]);
+    setHebrewMonth("");
   };
 
   const availableEditors = editors?.filter(e => !selectedEditorIds.includes(e.id)) || [];
@@ -250,6 +264,26 @@ export function NewIssueModal({ open, onOpenChange, onContinue }: NewIssueModalP
               placeholder="נושא מרכזי של הגיליון"
             />
           </div>
+
+          {/* Hebrew Month - only for Niflaot Kids */}
+          {isNiflaotKids && (
+            <div className="space-y-2">
+              <Label>חודש עברי (אופציונלי)</Label>
+              <Select value={hebrewMonth} onValueChange={setHebrewMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר חודש עברי" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">ללא חודש עברי</SelectItem>
+                  {HEBREW_MONTHS.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Dates */}
           <div className="grid grid-cols-3 gap-4">
