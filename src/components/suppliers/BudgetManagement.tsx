@@ -295,14 +295,14 @@ export function BudgetManagement() {
                   <div>
                     <label className="text-sm font-medium">ספק</label>
                     <Select
-                      value={formData.supplier_id}
-                      onValueChange={(v) => setFormData({ ...formData, supplier_id: v })}
+                      value={formData.supplier_id || "none"}
+                      onValueChange={(v) => setFormData({ ...formData, supplier_id: v === "none" ? "" : v })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="בחר ספק (אופציונלי)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">ללא ספק</SelectItem>
+                        <SelectItem value="none">ללא ספק</SelectItem>
                         {suppliers?.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
