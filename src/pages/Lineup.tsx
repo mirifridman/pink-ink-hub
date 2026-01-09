@@ -51,6 +51,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
+import html2pdf from "html2pdf.js";
 
 const getDeadlineStatus = (daysLeft: number): "critical" | "urgent" | "warning" | "success" | "waiting" => {
   if (daysLeft <= 0) return "critical";
@@ -167,6 +168,23 @@ export default function Lineup() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!lineupContainerRef.current) return;
+    try {
+      const opt = {
+        margin: 10,
+        filename: `lineup-${selectedIssue?.magazine?.name}-${selectedIssue?.issue_number}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'landscape' as const }
+      };
+      await html2pdf().set(opt).from(lineupContainerRef.current).save();
+      toast.success('הליינאפ יוצא ל-PDF בהצלחה!');
+    } catch (error) {
+      toast.error('שגיאה בייצוא ה-PDF');
+    }
+  };
+
   const handleShare = async () => {
     const shareUrl = window.location.href;
     if (navigator.share) {
@@ -237,6 +255,10 @@ export default function Lineup() {
                   <DropdownMenuItem onClick={handleExportImage}>
                     <FileImage className="w-4 h-4 ml-2" />
                     ייצוא לתמונה
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPdf}>
+                    <FileText className="w-4 h-4 ml-2" />
+                    ייצוא ל-PDF
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
