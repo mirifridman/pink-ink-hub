@@ -362,11 +362,13 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       let issueId = savedIssueId;
       
       if (existingIssueId) {
-        // Update existing issue
-        await updateIssue.mutateAsync({
-          id: existingIssueId,
-          status: asDraft ? "draft" : "in_progress",
-        });
+        // Update existing issue - only change status if saving as draft
+        if (asDraft) {
+          await updateIssue.mutateAsync({
+            id: existingIssueId,
+            status: "draft",
+          });
+        }
         issueId = existingIssueId;
         
         // For existing issues, we need to update/create/delete lineup items
@@ -547,7 +549,9 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         setLastAutoSave(new Date());
         toast.success("נשמר אוטומטית", { duration: 2000 });
       } else {
-        toast.success(asDraft ? "הגיליון נשמר כטיוטה" : "הגיליון נשמר בהצלחה");
+        const message = asDraft ? "הגיליון נשמר כטיוטה" : 
+                        existingIssueId ? "השינויים נשמרו בהצלחה" : "הגיליון נשמר בהצלחה";
+        toast.success(message);
         onClose();
         navigate(`/issues?view=${issueId}`);
       }
@@ -923,7 +927,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             </Button>
           )}
           <Button
-            onClick={() => handleSave(!!existingIssueId)}
+            onClick={() => handleSave(false)}
             disabled={saving}
             className="gradient-neon text-white"
           >
