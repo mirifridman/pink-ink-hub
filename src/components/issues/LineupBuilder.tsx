@@ -67,6 +67,7 @@ interface LineupRow {
   responsibleEditorId?: string;
   originalPages?: number[]; // Track original pages to detect changes
   wasDesigned?: boolean; // Track if item was designed before editing
+  pagesChanged?: boolean; // Track if pages were manually changed (e.g., via swap)
 }
 
 interface InsertRow {
@@ -257,9 +258,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       const row2 = rows.find(r => r.id === id2);
       if (!row1 || !row2) return rows;
       
+      // When swapping, both items' pages change, so mark them for standby if they were designed
       return rows.map(row => {
-        if (row.id === id1) return { ...row, pages: row2.pages };
-        if (row.id === id2) return { ...row, pages: row1.pages };
+        if (row.id === id1) return { ...row, pages: row2.pages, pagesChanged: true };
+        if (row.id === id2) return { ...row, pages: row1.pages, pagesChanged: true };
         return row;
       });
     });
@@ -382,9 +384,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             const isExisting = existingRowIds.includes(row.id);
             
             // Check if pages changed for items that were designed
-            const pagesChanged = row.originalPages && 
+            const pagesChangedByPosition = row.originalPages && 
               (sortedPages[0] !== row.originalPages[0] || 
                sortedPages[sortedPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
+            const pagesChanged = pagesChangedByPosition || row.pagesChanged;
             const shouldSetStandby = pagesChanged && row.wasDesigned;
             
             if (isExisting) {
