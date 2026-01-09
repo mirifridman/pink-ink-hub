@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NeonCard, NeonCardContent } from "@/components/ui/NeonCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -68,6 +68,7 @@ const getStatusDisplay = (textReady: boolean, filesReady: boolean, isDesigned: b
 
 export default function Lineup() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { data: issues, isLoading: issuesLoading } = useIssues();
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("table");
@@ -301,12 +302,22 @@ export default function Lineup() {
                       </div>
                     </div>
                     
-                    {/* Edit Issue Button */}
+                    {/* Edit Buttons */}
                     {canEdit && (
-                      <EditIssueDialog 
-                        issue={selectedIssue} 
-                        onUpdate={() => queryClient.invalidateQueries({ queryKey: ['issues'] })} 
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/issues/edit/${selectedIssue.id}`)}
+                        >
+                          <Pencil className="w-4 h-4 ml-2" />
+                          ערוך ליינאפ
+                        </Button>
+                        <EditIssueDialog 
+                          issue={selectedIssue} 
+                          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['issues'] })} 
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
