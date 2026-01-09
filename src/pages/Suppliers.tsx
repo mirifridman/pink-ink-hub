@@ -55,6 +55,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { SupplierAssignmentsReport } from "@/components/suppliers/SupplierAssignmentsReport";
+import { BudgetManagement } from "@/components/suppliers/BudgetManagement";
+import { DollarSign } from "lucide-react";
 
 const supplierTypes = [
   { value: "writer", label: "כותב/ת", icon: Pencil },
@@ -276,6 +278,10 @@ export default function Suppliers() {
             <TabsTrigger value="suppliers" className="gap-2">
               <Users className="w-4 h-4" />
               ספקים
+            </TabsTrigger>
+            <TabsTrigger value="budget" className="gap-2">
+              <DollarSign className="w-4 h-4" />
+              ניהול תקציב
             </TabsTrigger>
             <TabsTrigger value="assignments" className="gap-2">
               <ClipboardList className="w-4 h-4" />
@@ -566,6 +572,10 @@ export default function Suppliers() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="budget" className="mt-6">
+            <BudgetManagement />
           </TabsContent>
 
           <TabsContent value="assignments" className="mt-6">

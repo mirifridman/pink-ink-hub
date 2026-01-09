@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      budget_items: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          insert_id: string | null
+          issue_id: string
+          lineup_item_id: string | null
+          notes: string | null
+          page_count: number | null
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          insert_id?: string | null
+          issue_id: string
+          lineup_item_id?: string | null
+          notes?: string | null
+          page_count?: number | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          insert_id?: string | null
+          issue_id?: string
+          lineup_item_id?: string | null
+          notes?: string | null
+          page_count?: number | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_items_insert_id_fkey"
+            columns: ["insert_id"]
+            isOneToOne: false
+            referencedRelation: "inserts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_items_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_items_lineup_item_id_fkey"
+            columns: ["lineup_item_id"]
+            isOneToOne: false
+            referencedRelation: "lineup_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editor_messages: {
         Row: {
           content: string
