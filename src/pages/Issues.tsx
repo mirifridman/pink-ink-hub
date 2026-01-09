@@ -23,7 +23,9 @@ export default function Issues() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const viewIssueId = searchParams.get("view");
+  const editIssueId = searchParams.get("edit");
   const { data: viewIssue } = useIssue(viewIssueId || undefined);
+  const { data: editIssue } = useIssue(editIssueId || undefined);
   
   const [showNewIssueModal, setShowNewIssueModal] = useState(false);
   const [showLineupBuilder, setShowLineupBuilder] = useState(false);
@@ -42,6 +44,7 @@ export default function Issues() {
     setShowLineupBuilder(false);
     setNewIssueData(null);
     setEditingIssueId(null);
+    setSearchParams({});
   };
 
   const handleBackFromView = () => {
@@ -69,6 +72,28 @@ export default function Issues() {
     setSearchParams({});
     setShowLineupBuilder(true);
   };
+
+  // Handle edit from URL parameter (e.g., from Lineup page)
+  useEffect(() => {
+    if (editIssue && !showLineupBuilder) {
+      const issueData: NewIssueData = {
+        magazine_id: editIssue.magazine_id,
+        issue_number: editIssue.issue_number,
+        template_pages: editIssue.template_pages as 52 | 68,
+        distribution_month: new Date(editIssue.distribution_month),
+        theme: editIssue.theme,
+        design_start_date: new Date(editIssue.design_start_date),
+        sketch_close_date: new Date(editIssue.sketch_close_date),
+        print_date: new Date(editIssue.print_date),
+        editor_ids: [],
+        hebrew_month: (editIssue as any).hebrew_month || undefined,
+      };
+      
+      setNewIssueData(issueData);
+      setEditingIssueId(editIssue.id);
+      setShowLineupBuilder(true);
+    }
+  }, [editIssue, showLineupBuilder]);
 
   // Show issue view if viewIssueId is set
   if (viewIssueId && viewIssue) {

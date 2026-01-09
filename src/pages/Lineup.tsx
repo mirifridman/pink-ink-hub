@@ -330,7 +330,7 @@ export default function Lineup() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => navigate(`/issues/edit/${selectedIssue.id}`)}
+                          onClick={() => navigate(`/issues?edit=${selectedIssue.id}`)}
                         >
                           <Pencil className="w-4 h-4 ml-2" />
                           ערוך ליינאפ
