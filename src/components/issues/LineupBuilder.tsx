@@ -429,7 +429,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           print_date: format(issueData.print_date, "yyyy-MM-dd"),
           status: asDraft ? "draft" : "in_progress",
           created_by: user.id,
-        });
+          hebrew_month: issueData.hebrew_month || null,
+        } as any);
 
         issueId = issue.id;
         setSavedIssueId(issue.id);

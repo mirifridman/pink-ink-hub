@@ -45,6 +45,7 @@ import { EditableTextField } from "@/components/lineup/EditableTextField";
 import { CommentsSidePanel } from "@/components/lineup/CommentsSidePanel";
 import { FlatplanView } from "@/components/lineup/FlatplanView";
 import { getContentTypeColor, getContentTypeLabel } from "@/components/lineup/ContentTypeSelect";
+import { EditIssueDialog } from "@/components/issues/EditIssueDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -260,6 +261,12 @@ export default function Lineup() {
                       <p className="text-xs text-muted-foreground">נושא</p>
                       <p className="font-medium text-primary">{selectedIssue.theme}</p>
                     </div>
+                    {/* Hebrew Month Badge - only for Niflaot Kids */}
+                    {(selectedIssue as any).hebrew_month && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                        חודש {(selectedIssue as any).hebrew_month}
+                      </Badge>
+                    )}
                     <div className="flex items-center gap-2">
                       <Pencil className="w-4 h-4 text-muted-foreground" />
                       <div>
@@ -276,15 +283,31 @@ export default function Lineup() {
                     </div>
                   </div>
                   
-                  {/* Progress Bar */}
-                  <div className="flex items-center gap-4 min-w-[200px]">
-                    <div className="flex-1">
+                  <div className="flex items-center gap-4">
+                    {/* Progress Bar */}
+                    <div className="min-w-[200px]">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-muted-foreground">התקדמות</span>
                         <span className="font-medium">{progress}%</span>
                       </div>
-                      <Progress value={progress} className="h-2" />
+                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-2 rounded-full transition-all duration-500",
+                            progress === 0 ? "bg-muted" : "bg-amber-400"
+                          )}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
                     </div>
+                    
+                    {/* Edit Issue Button */}
+                    {canEdit && (
+                      <EditIssueDialog 
+                        issue={selectedIssue} 
+                        onUpdate={() => queryClient.invalidateQueries({ queryKey: ['issues'] })} 
+                      />
+                    )}
                   </div>
                 </div>
               </NeonCardContent>
