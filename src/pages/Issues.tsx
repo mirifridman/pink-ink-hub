@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NeonCard, NeonCardContent } from "@/components/ui/NeonCard";
 import { Button } from "@/components/ui/button";
@@ -224,7 +224,7 @@ interface IssueCardProps {
 
 function IssueCard({ issue }: IssueCardProps) {
   const { data: lineupItems = [] } = useLineupItems(issue.id);
-  const [, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Calculate progress
   const totalPages = issue.template_pages;
@@ -235,11 +235,16 @@ function IssueCard({ issue }: IssueCardProps) {
   
   const progress = totalPages > 0 ? Math.round((designedPages / totalPages) * 100) : 0;
 
+  const handleClick = () => {
+    // Navigate directly to Lineup page with this issue selected
+    navigate(`/lineup?issue=${issue.id}`);
+  };
+
   return (
     <NeonCard 
       variant="glow" 
       className="group cursor-pointer overflow-hidden"
-      onClick={() => setSearchParams({ view: issue.id })}
+      onClick={handleClick}
     >
       <div className="flex">
         <div className="w-32 h-48 flex-shrink-0 overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">

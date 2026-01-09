@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NeonCard, NeonCardContent } from "@/components/ui/NeonCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 import { 
   TableProperties, 
   FileText,
@@ -17,8 +19,20 @@ import {
   Bell,
   Check,
   MessageSquare,
-  LayoutGrid
+  LayoutGrid,
+  Download,
+  Share2,
+  FileImage,
+  Calendar,
+  Printer,
+  Pencil
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useIssues, useLineupItems } from "@/hooks/useIssues";
 import { format, differenceInDays } from "date-fns";
@@ -34,6 +48,8 @@ import { getContentTypeColor, getContentTypeLabel } from "@/components/lineup/Co
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import html2canvas from "html2canvas";
 
 const getDeadlineStatus = (daysLeft: number): "critical" | "urgent" | "warning" | "success" | "waiting" => {
   if (daysLeft <= 0) return "critical";
@@ -50,11 +66,13 @@ const getStatusDisplay = (textReady: boolean, filesReady: boolean, isDesigned: b
 };
 
 export default function Lineup() {
+  const [searchParams] = useSearchParams();
   const { data: issues, isLoading: issuesLoading } = useIssues();
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("table");
   const { hasPermission, user, role } = useAuth();
   const queryClient = useQueryClient();
+  const lineupContainerRef = useRef<HTMLDivElement>(null);
   
   // Side panel state
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -67,12 +85,34 @@ export default function Lineup() {
   // Filter only active issues (not drafts)
   const activeIssues = issues?.filter(i => i.status !== "draft") || [];
   
+  // Check for issue from URL params
+  const issueFromUrl = searchParams.get("issue");
+  
+  // Set issue from URL or first active issue
+  useEffect(() => {
+    if (issueFromUrl && !selectedIssueId) {
+      setSelectedIssueId(issueFromUrl);
+    }
+  }, [issueFromUrl, selectedIssueId]);
+  
   // Set first active issue as default when loaded
-  const effectiveIssueId = selectedIssueId || activeIssues[0]?.id || "";
+  const effectiveIssueId = selectedIssueId || issueFromUrl || activeIssues[0]?.id || "";
   
   const { data: lineupItems, isLoading: lineupLoading, refetch: refetchLineup } = useLineupItems(effectiveIssueId);
   
   const selectedIssue = activeIssues.find(i => i.id === effectiveIssueId);
+  
+  // Calculate progress percentage
+  const calculateProgress = () => {
+    if (!lineupItems?.length || !selectedIssue) return 0;
+    const totalPages = selectedIssue.template_pages;
+    const completedPages = lineupItems
+      .filter(item => item.text_ready || item.files_ready || item.is_designed)
+      .reduce((sum, item) => sum + (item.page_end - item.page_start + 1), 0);
+    return totalPages > 0 ? Math.round((completedPages / totalPages) * 100) : 0;
+  };
+  
+  const progress = calculateProgress();
   
   // Calculate days left based on issue's sketch_close_date
   const getDaysLeft = (item: typeof lineupItems extends (infer T)[] ? T : never) => {
@@ -107,12 +147,59 @@ export default function Lineup() {
     setSidePanelOpen(true);
   };
 
+  // Export functions
+  const handleExportImage = async () => {
+    if (!lineupContainerRef.current) return;
+    try {
+      const canvas = await html2canvas(lineupContainerRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+      const link = document.createElement('a');
+      link.download = `lineup-${selectedIssue?.magazine?.name}-${selectedIssue?.issue_number}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+      toast.success('הליינאפ יוצא לתמונה בהצלחה!');
+    } catch (error) {
+      toast.error('שגיאה בייצוא התמונה');
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `ליינאפ - ${selectedIssue?.magazine?.name} גיליון ${selectedIssue?.issue_number}`,
+          text: `צפה בליינאפ של ${selectedIssue?.theme}`,
+          url: shareUrl
+        });
+      } catch (err) {
+        // User cancelled share
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('הקישור הועתק ללוח!');
+    }
+  };
+
   const isLoading = issuesLoading || lineupLoading;
+
+  // Get item status color for row highlighting
+  const getItemStatusColor = (item: NonNullable<typeof lineupItems>[number]) => {
+    if (item.is_designed) {
+      return 'border-r-4 border-r-amber-400 bg-amber-50/50 dark:bg-amber-900/10';
+    }
+    if (item.text_ready || item.files_ready) {
+      return 'border-r-4 border-r-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10';
+    }
+    return 'border-r-4 border-r-muted';
+  };
 
   return (
     <TooltipProvider>
       <AppLayout>
-        <div className="space-y-6 animate-fade-in-up" dir="rtl">
+        <div className="space-y-6 animate-fade-in-up" dir="rtl" ref={lineupContainerRef}>
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -122,7 +209,7 @@ export default function Lineup() {
               </h1>
               <p className="text-muted-foreground mt-1">ניהול תוכן הגליון</p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Select value={effectiveIssueId} onValueChange={setSelectedIssueId}>
                 <SelectTrigger className="w-[280px]">
                   <SelectValue placeholder="בחר גליון" />
@@ -135,8 +222,74 @@ export default function Lineup() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Export/Share Buttons */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 ml-2" />
+                    ייצוא
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportImage}>
+                    <FileImage className="w-4 h-4 ml-2" />
+                    ייצוא לתמונה
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 className="w-4 h-4 ml-2" />
+                שתף
+              </Button>
             </div>
           </div>
+
+          {/* Issue Details Card */}
+          {selectedIssue && (
+            <NeonCard className="bg-muted/30">
+              <NeonCardContent className="p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-6">
+                    <div>
+                      <p className="text-xs text-muted-foreground">מגזין</p>
+                      <p className="font-medium">{selectedIssue.magazine?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">נושא</p>
+                      <p className="font-medium text-primary">{selectedIssue.theme}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">סגירת סקיצה</p>
+                        <p className="font-medium">{format(new Date(selectedIssue.sketch_close_date), "dd/MM/yyyy")}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Printer className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">הורדה לדפוס</p>
+                        <p className="font-medium">{format(new Date(selectedIssue.print_date), "dd/MM/yyyy")}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="flex items-center gap-4 min-w-[200px]">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">התקדמות</span>
+                        <span className="font-medium">{progress}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2" />
+                    </div>
+                  </div>
+                </div>
+              </NeonCardContent>
+            </NeonCard>
+          )}
 
           {/* Legend */}
           <div className="flex items-center gap-6 text-sm flex-wrap">
@@ -148,6 +301,14 @@ export default function Lineup() {
               <StatusBadge status="success">מאושר</StatusBadge>
             </div>
             <div className="flex items-center gap-3 text-muted-foreground border-r pr-4">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-emerald-400" />
+                <span className="text-xs">תוכן התקבל</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-amber-400" />
+                <span className="text-xs">מעוצב</span>
+              </div>
               <div className="flex items-center gap-1">
                 <Send className="w-4 h-4 text-emerald-500" />
                 <span className="text-xs">הקצאה נשלחה</span>
@@ -244,9 +405,10 @@ export default function Lineup() {
                             <tr
                               key={item.id}
                               className={cn(
-                                "border-b last:border-b-0 hover:bg-muted/30 transition-colors group",
-                                daysLeft <= 0 && "bg-red-500/5",
-                                daysLeft > 0 && daysLeft <= 2 && "bg-orange-500/5"
+                                "border-b last:border-b-0 hover:bg-muted/50 transition-colors group",
+                                getItemStatusColor(item),
+                                daysLeft <= 0 && !item.is_designed && !item.text_ready && !item.files_ready && "bg-red-50/50 dark:bg-red-900/10",
+                                daysLeft > 0 && daysLeft <= 2 && !item.is_designed && !item.text_ready && !item.files_ready && "bg-orange-50/50 dark:bg-orange-900/10"
                               )}
                             >
                               <td className="p-4">
