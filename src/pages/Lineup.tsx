@@ -85,8 +85,10 @@ export default function Lineup() {
   const canManageReminders = hasPermission(["admin", "editor"]);
   const canEdit = role === "admin" || role === "editor";
   
-  // Filter only active issues (not drafts)
-  const activeIssues = issues?.filter(i => i.status !== "draft") || [];
+  // Filter issues - show all issues for dropdown (including archived for viewing)
+  const activeIssues = issues || [];
+  const archivedIssues = issues?.filter(i => i.status === "archived") || [];
+  const nonArchivedIssues = issues?.filter(i => i.status !== "archived") || [];
   
   // Check for issue from URL params
   const issueFromUrl = searchParams.get("issue");
@@ -104,6 +106,7 @@ export default function Lineup() {
   const { data: lineupItems, isLoading: lineupLoading, refetch: refetchLineup } = useLineupItems(effectiveIssueId);
   
   const selectedIssue = activeIssues.find(i => i.id === effectiveIssueId);
+  const isArchived = selectedIssue?.status === "archived";
   
   // Calculate progress percentage
   const calculateProgress = () => {
@@ -203,6 +206,31 @@ export default function Lineup() {
     }
   };
 
+  const handleMarkAsPrinted = async () => {
+    if (!selectedIssue) return;
+    
+    const confirmed = window.confirm(
+      `האם אתה בטוח שברצונך לסמן את גיליון ${selectedIssue.issue_number} כהודפס?\nפעולה זו תעביר את הגיליון לארכיון ותסגור את אפשרויות העריכה.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const { error } = await supabase
+        .from('issues')
+        .update({ status: 'archived' })
+        .eq('id', selectedIssue.id);
+      
+      if (error) throw error;
+      
+      toast.success('הגיליון הועבר לארכיון');
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+    } catch (error) {
+      console.error('Error archiving issue:', error);
+      toast.error('שגיאה בעדכון הגיליון');
+    }
+  };
+
   const isLoading = issuesLoading || lineupLoading;
 
   // Get item status color for row highlighting
@@ -235,11 +263,28 @@ export default function Lineup() {
                   <SelectValue placeholder="בחר גליון" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeIssues.map((issue) => (
-                    <SelectItem key={issue.id} value={issue.id}>
-                      {issue.magazine?.name} - גליון {issue.issue_number} ({issue.theme})
-                    </SelectItem>
-                  ))}
+                  {nonArchivedIssues.length > 0 && (
+                    <>
+                      {nonArchivedIssues.map((issue) => (
+                        <SelectItem key={issue.id} value={issue.id}>
+                          {issue.magazine?.name} - גליון {issue.issue_number} ({issue.theme})
+                          {issue.status === "draft" && " [טיוטה]"}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {archivedIssues.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-t mt-1 pt-2">
+                        ארכיון
+                      </div>
+                      {archivedIssues.map((issue) => (
+                        <SelectItem key={issue.id} value={issue.id} className="text-muted-foreground">
+                          {issue.magazine?.name} - גליון {issue.issue_number} ({issue.theme})
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               
@@ -325,7 +370,7 @@ export default function Lineup() {
                     </div>
                     
                     {/* Edit Buttons */}
-                    {canEdit && (
+                    {canEdit && !isArchived && (
                       <div className="flex items-center gap-2">
                         <Button 
                           variant="outline" 
@@ -339,7 +384,21 @@ export default function Lineup() {
                           issue={selectedIssue} 
                           onUpdate={() => queryClient.invalidateQueries({ queryKey: ['issues'] })} 
                         />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleMarkAsPrinted}
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                        >
+                          <Check className="w-4 h-4 ml-2" />
+                          סמן כהודפס
+                        </Button>
                       </div>
+                    )}
+                    {isArchived && (
+                      <Badge variant="secondary" className="bg-gray-200 text-gray-600">
+                        ארכיון - תצוגה בלבד
+                      </Badge>
                     )}
                   </div>
                 </div>
