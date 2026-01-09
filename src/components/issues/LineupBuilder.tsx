@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Save, GripVertical, ArrowUpDown } from "lucide-react";
+import { Plus, Trash2, Save, GripVertical, ArrowUpDown, ChevronUp, ChevronDown, ArrowLeftRight } from "lucide-react";
 import { PagePickerModal } from "./PagePickerModal";
 import { MultiSupplierSelect } from "./MultiSupplierSelect";
 import { EditorSelect } from "./EditorSelect";
@@ -33,6 +33,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface LineupBuilderProps {
   issueData: NewIssueData;
@@ -95,7 +110,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const pendingNavigationRef = useRef<(() => void) | null>(null);
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
   const [showSwapModal, setShowSwapModal] = useState(false);
-  const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
+  const [swapSourceRow, setSwapSourceRow] = useState<LineupRow | null>(null);
+  const [swapTargetId, setSwapTargetId] = useState<string>("");
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Load existing lineup items if editing a draft
@@ -265,14 +281,31 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     setDraggedRowId(null);
   };
 
-  const handleSwapClick = (id: string) => {
-    if (!swapSourceId) {
-      setSwapSourceId(id);
-    } else if (swapSourceId === id) {
-      setSwapSourceId(null);
-    } else {
-      swapRowPages(swapSourceId, id);
-      setSwapSourceId(null);
+  const openSwapModal = (row: LineupRow) => {
+    setSwapSourceRow(row);
+    setSwapTargetId("");
+    setShowSwapModal(true);
+  };
+
+  const executeSwap = () => {
+    if (swapSourceRow && swapTargetId) {
+      swapRowPages(swapSourceRow.id, swapTargetId);
+      setShowSwapModal(false);
+      setSwapSourceRow(null);
+      setSwapTargetId("");
+      toast.success("העמודים הוחלפו בהצלחה");
+    }
+  };
+
+  const moveRowUp = (index: number) => {
+    if (index > 0) {
+      moveRow(index, index - 1);
+    }
+  };
+
+  const moveRowDown = (index: number) => {
+    if (index < lineupRows.length - 1) {
+      moveRow(index, index + 1);
     }
   };
 
@@ -614,15 +647,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
 
       {/* Lineup Table */}
       <div className="border rounded-lg overflow-hidden">
-        {swapSourceId && (
-          <div className="p-2 bg-primary/10 text-primary text-sm text-center border-b">
-            בחר פריט נוסף להחלפת עמודים (או לחץ שוב לביטול)
-          </div>
-        )}
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-24 text-center">סדר</TableHead>
               <TableHead className="text-right w-24">עמוד</TableHead>
               <TableHead className="text-right w-32">סוג תוכן</TableHead>
               <TableHead className="text-right">תוכן</TableHead>
@@ -643,25 +671,44 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, row.id)}
                 className={cn(
-                  "cursor-move",
-                  draggedRowId === row.id && "opacity-50",
-                  swapSourceId === row.id && "bg-primary/10 ring-2 ring-primary"
+                  "cursor-move transition-colors",
+                  draggedRowId === row.id && "opacity-50 bg-muted"
                 )}
               >
                 <TableCell className="p-1">
-                  <div className="flex flex-col items-center gap-1">
-                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex items-center justify-center gap-0.5">
+                    <div className="flex flex-col">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => moveRowUp(index)}
+                        disabled={index === 0}
+                        title="הזז למעלה"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => moveRowDown(index)}
+                        disabled={index === lineupRows.length - 1}
+                        title="הזז למטה"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={cn(
-                        "h-6 w-6",
-                        swapSourceId === row.id && "bg-primary text-primary-foreground"
-                      )}
-                      onClick={() => handleSwapClick(row.id)}
+                      className="h-7 w-7"
+                      onClick={() => openSwapModal(row)}
                       title="החלף עמודים עם פריט אחר"
+                      disabled={lineupRows.length < 2}
                     >
-                      <ArrowUpDown className="w-3 h-3" />
+                      <ArrowLeftRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </TableCell>
@@ -869,6 +916,50 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           }
         }}
       />
+
+      {/* Swap Pages Modal */}
+      <Dialog open={showSwapModal} onOpenChange={setShowSwapModal}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>החלפת עמודים</DialogTitle>
+            <DialogDescription>
+              {swapSourceRow && (
+                <>
+                  בחר פריט להחלפת עמודים עם: <strong>{swapSourceRow.content || "ללא שם"}</strong>
+                  {swapSourceRow.pages.length > 0 && (
+                    <span className="mr-1">(עמ׳ {formatPages(swapSourceRow.pages)})</span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select value={swapTargetId} onValueChange={setSwapTargetId}>
+              <SelectTrigger>
+                <SelectValue placeholder="בחר פריט להחלפה" />
+              </SelectTrigger>
+              <SelectContent>
+                {lineupRows
+                  .filter(r => r.id !== swapSourceRow?.id && r.pages.length > 0)
+                  .map(row => (
+                    <SelectItem key={row.id} value={row.id}>
+                      {row.content || "ללא שם"} (עמ׳ {formatPages(row.pages)})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowSwapModal(false)}>
+              ביטול
+            </Button>
+            <Button onClick={executeSwap} disabled={!swapTargetId}>
+              <ArrowLeftRight className="w-4 h-4 ml-2" />
+              החלף עמודים
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
