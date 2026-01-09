@@ -3,15 +3,13 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-type AppRole = "admin" | "designer" | "editor" | "publisher" | "social";
-
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles?: AppRole[];
+  adminOnly?: boolean;
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, role, loading, hasPermission } = useAuth();
+export function ProtectedRoute({ children, adminOnly }: ProtectedRouteProps) {
+  const { user, role, loading } = useAuth();
 
   if (loading) {
     return (
@@ -25,14 +23,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
-  // If specific roles are required and user doesn't have permission
-  if (allowedRoles && allowedRoles.length > 0 && !hasPermission(allowedRoles)) {
+  // Admin-only pages require admin role
+  if (adminOnly && role !== "admin") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-foreground mb-2">אין הרשאה</h1>
           <p className="text-muted-foreground mb-4">
-            אין לך הרשאה לצפות בעמוד זה
+            עמוד זה מיועד למנהלים בלבד
           </p>
           <p className="text-sm text-muted-foreground">
             התפקיד שלך: {role || "לא מוגדר"}
