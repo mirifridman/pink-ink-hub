@@ -630,8 +630,11 @@ export default function Lineup() {
                         page_end: item.page_end,
                         content: item.content,
                         content_type: (item as any).content_type,
+                        design_status: (item as any).design_status,
+                        is_designed: item.is_designed,
                       }))}
                       templatePages={selectedIssue.template_pages}
+                      issueId={selectedIssue.id}
                       onUpdate={() => refetchLineup()}
                     />
                   )}
