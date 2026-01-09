@@ -65,6 +65,8 @@ interface LineupRow {
   source: string;
   notes: string;
   responsibleEditorId?: string;
+  originalPages?: number[]; // Track original pages to detect changes
+  wasDesigned?: boolean; // Track if item was designed before editing
 }
 
 interface InsertRow {
@@ -124,16 +126,21 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   // Load existing data when editing a draft
   useEffect(() => {
     if (existingIssueId && existingLineupItems && !initialLoadDone) {
-      const rows = existingLineupItems.map((item) => ({
-        id: item.id,
-        pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
-        contentType: (item as any).content_type || "",
-        content: item.content,
-        supplierIds: item.supplier_id ? [item.supplier_id] : [],
-        source: item.source || "",
-        notes: item.notes || "",
-        responsibleEditorId: (item as any).responsible_editor_id || undefined,
-      }));
+      const rows = existingLineupItems.map((item) => {
+        const pages = Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i);
+        return {
+          id: item.id,
+          pages,
+          originalPages: [...pages], // Store original pages to detect changes
+          wasDesigned: (item as any).design_status === 'designed' || item.is_designed,
+          contentType: (item as any).content_type || "",
+          content: item.content,
+          supplierIds: item.supplier_id ? [item.supplier_id] : [],
+          source: item.source || "",
+          notes: item.notes || "",
+          responsibleEditorId: (item as any).responsible_editor_id || undefined,
+        };
+      });
       setLineupRows(rows);
       setInitialLoadDone(true);
     }
@@ -374,8 +381,14 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             const sortedPages = [...row.pages].sort((a, b) => a - b);
             const isExisting = existingRowIds.includes(row.id);
             
+            // Check if pages changed for items that were designed
+            const pagesChanged = row.originalPages && 
+              (sortedPages[0] !== row.originalPages[0] || 
+               sortedPages[sortedPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
+            const shouldSetStandby = pagesChanged && row.wasDesigned;
+            
             if (isExisting) {
-              await updateLineupItem.mutateAsync({
+              const updateData: any = {
                 id: row.id,
                 page_start: sortedPages[0],
                 page_end: sortedPages[sortedPages.length - 1],
@@ -385,7 +398,14 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 source: row.source || null,
                 notes: row.notes || null,
                 responsible_editor_id: row.responsibleEditorId || null,
-              } as any);
+              };
+              
+              // Set to standby if pages changed and was designed
+              if (shouldSetStandby) {
+                updateData.design_status = 'standby';
+              }
+              
+              await updateLineupItem.mutateAsync(updateData);
             } else {
               await createLineupItem.mutateAsync({
                 issue_id: existingIssueId,
