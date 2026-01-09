@@ -13,6 +13,8 @@ export type PermissionKey =
   | "edit_lineup_is_designed"
   | "view_suppliers"
   | "manage_suppliers"
+  | "view_suppliers_budget"
+  | "view_suppliers_assignments"
   | "view_team"
   | "manage_team"
   | "view_reminders"
@@ -43,6 +45,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   edit_lineup_is_designed: "עדכון סטטוס מעוצב",
   view_suppliers: "צפייה בספקים",
   manage_suppliers: "ניהול ספקים",
+  view_suppliers_budget: "צפייה בניהול תקציב",
+  view_suppliers_assignments: "צפייה בדו״ח הקצאות",
   view_team: "צפייה בצוות",
   manage_team: "ניהול צוות",
   view_reminders: "צפייה בתזכורות",
@@ -75,7 +79,7 @@ export const PERMISSION_GROUPS: { name: string; permissions: PermissionKey[] }[]
   },
   {
     name: "ספקים",
-    permissions: ["view_suppliers", "manage_suppliers"],
+    permissions: ["view_suppliers", "manage_suppliers", "view_suppliers_budget", "view_suppliers_assignments"],
   },
   {
     name: "צוות",
