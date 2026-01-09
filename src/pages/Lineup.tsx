@@ -84,7 +84,6 @@ export default function Lineup() {
   
   const canManageReminders = hasPermission(["admin", "editor"]);
   const canEdit = role === "admin" || role === "editor";
-  console.log("Lineup canEdit:", canEdit, "role:", role);
   
   // Filter only active issues (not drafts)
   const activeIssues = issues?.filter(i => i.status !== "draft") || [];
