@@ -17,29 +17,29 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarBadge } from "./SidebarBadge";
 import { usePendingRemindersCount, useUnreadNotificationsCount } from "@/hooks/useReminders";
-
-type AppRole = "admin" | "designer" | "editor" | "publisher";
+import { useMyPermissions, type PermissionKey } from "@/hooks/usePermissions";
 
 interface MenuItem {
   icon: typeof LayoutDashboard;
   label: string;
   path: string;
-  roles: AppRole[];
+  permissionKey: PermissionKey;
   badgeKey?: "reminders" | "notifications";
+  adminOnly?: boolean;
 }
 
 const menuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: "דשבורד", path: "/", roles: ["admin", "editor", "designer"] },
-  { icon: BookOpen, label: "גליונות", path: "/issues", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: TableProperties, label: "ליינאפ", path: "/lineup", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: Users, label: "ספקים", path: "/suppliers", roles: ["admin", "editor", "designer"] },
-  { icon: Users, label: "אנשי צוות", path: "/team", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: Bell, label: "תזכורות", path: "/reminders", roles: ["admin", "editor"], badgeKey: "reminders" },
-  { icon: Calendar, label: "לוח רבעוני", path: "/schedule", roles: ["admin", "editor", "designer", "publisher"] },
-  { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", roles: ["admin", "editor", "designer", "publisher"], badgeKey: "notifications" },
-  { icon: UserCog, label: "ניהול משתמשים", path: "/users", roles: ["admin"] },
-  { icon: Shield, label: "ניהול הרשאות", path: "/permissions", roles: ["admin"] },
-  { icon: Settings, label: "הגדרות", path: "/settings", roles: ["admin"] },
+  { icon: LayoutDashboard, label: "דשבורד", path: "/", permissionKey: "view_dashboard" },
+  { icon: BookOpen, label: "גליונות", path: "/issues", permissionKey: "view_issues" },
+  { icon: TableProperties, label: "ליינאפ", path: "/lineup", permissionKey: "view_lineup" },
+  { icon: Users, label: "ספקים", path: "/suppliers", permissionKey: "view_suppliers" },
+  { icon: Users, label: "אנשי צוות", path: "/team", permissionKey: "view_team" },
+  { icon: Bell, label: "תזכורות", path: "/reminders", permissionKey: "view_reminders", badgeKey: "reminders" },
+  { icon: Calendar, label: "לוח רבעוני", path: "/schedule", permissionKey: "view_schedule" },
+  { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", permissionKey: "view_messages", badgeKey: "notifications" },
+  { icon: UserCog, label: "ניהול משתמשים", path: "/users", permissionKey: "view_users", adminOnly: true },
+  { icon: Shield, label: "ניהול הרשאות", path: "/permissions", permissionKey: "manage_settings", adminOnly: true },
+  { icon: Settings, label: "הגדרות", path: "/settings", permissionKey: "view_settings", adminOnly: true },
 ];
 
 interface AppSidebarProps {
@@ -48,13 +48,22 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const location = useLocation();
-  const { hasPermission } = useAuth();
+  const { role } = useAuth();
+  const { data: permissions, isLoading: permissionsLoading } = useMyPermissions();
   const { data: pendingRemindersCount } = usePendingRemindersCount();
   const { data: unreadNotificationsCount } = useUnreadNotificationsCount();
 
-  const filteredMenuItems = menuItems.filter((item) => 
-    hasPermission(item.roles)
-  );
+  const filteredMenuItems = menuItems.filter((item) => {
+    // Admin always has access to everything
+    if (role === "admin") return true;
+    
+    // Admin-only items are only shown to admins
+    if (item.adminOnly) return false;
+    
+    // Check permission from database
+    if (permissionsLoading || !permissions) return false;
+    return permissions[item.permissionKey] === true;
+  });
 
   const getBadgeCount = (badgeKey?: "reminders" | "notifications") => {
     if (badgeKey === "reminders") return pendingRemindersCount || 0;
