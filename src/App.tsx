@@ -39,52 +39,52 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/issues" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
+              <ProtectedRoute>
                 <Issues />
               </ProtectedRoute>
             } />
             <Route path="/lineup" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
+              <ProtectedRoute>
                 <Lineup />
               </ProtectedRoute>
             } />
             <Route path="/suppliers" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer"]}>
+              <ProtectedRoute>
                 <Suppliers />
               </ProtectedRoute>
             } />
             <Route path="/team" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
+              <ProtectedRoute>
                 <Team />
               </ProtectedRoute>
             } />
             <Route path="/reminders" element={
-              <ProtectedRoute allowedRoles={["admin", "editor"]}>
+              <ProtectedRoute>
                 <Reminders />
               </ProtectedRoute>
             } />
             <Route path="/schedule" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
+              <ProtectedRoute>
                 <Schedule />
               </ProtectedRoute>
             } />
             <Route path="/messages" element={
-              <ProtectedRoute allowedRoles={["admin", "editor", "designer", "publisher", "social"]}>
+              <ProtectedRoute>
                 <Messages />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute adminOnly>
                 <Settings />
               </ProtectedRoute>
             } />
             <Route path="/users" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute adminOnly>
                 <Users />
               </ProtectedRoute>
             } />
             <Route path="/permissions" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute adminOnly>
                 <Permissions />
               </ProtectedRoute>
             } />
