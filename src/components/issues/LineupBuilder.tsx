@@ -258,10 +258,14 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       const row2 = rows.find(r => r.id === id2);
       if (!row1 || !row2) return rows;
       
+      // Copy the pages arrays before swapping to avoid reference issues
+      const row1Pages = [...row1.pages];
+      const row2Pages = [...row2.pages];
+      
       // When swapping, both items' pages change, so mark them for standby if they were designed
       return rows.map(row => {
-        if (row.id === id1) return { ...row, pages: row2.pages, pagesChanged: true };
-        if (row.id === id2) return { ...row, pages: row1.pages, pagesChanged: true };
+        if (row.id === id1) return { ...row, pages: row2Pages, pagesChanged: true };
+        if (row.id === id2) return { ...row, pages: row1Pages, pagesChanged: true };
         return row;
       });
     });
