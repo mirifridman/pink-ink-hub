@@ -630,6 +630,7 @@ export default function Lineup() {
                                         lineupItemId={item.id}
                                         field="is_designed"
                                         initialValue={item.is_designed}
+                                        designStatus={(item as any).design_status}
                                         onUpdate={() => refetchLineup()}
                                       />
                                     </div>
