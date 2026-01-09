@@ -358,13 +358,13 @@ export default function Lineup() {
                           <th className="p-4 text-right font-medium text-muted-foreground w-24">סוג</th>
                           <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
                           <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
+                          <th className="p-4 text-right font-medium text-muted-foreground w-28">עורך אחראי</th>
                           <th className="p-4 text-right font-medium text-muted-foreground w-12">
                             <Tooltip>
                               <TooltipTrigger>💬</TooltipTrigger>
                               <TooltipContent>הערות</TooltipContent>
                             </Tooltip>
                           </th>
-                          <th className="p-4 text-right font-medium text-muted-foreground w-28">דדליין</th>
                           <th className="p-4 text-center font-medium text-muted-foreground w-16">
                             <Tooltip>
                               <TooltipTrigger>📄</TooltipTrigger>
@@ -383,9 +383,6 @@ export default function Lineup() {
                               <TooltipContent>עיצוב הושלם</TooltipContent>
                             </Tooltip>
                           </th>
-                          {canManageReminders && (
-                            <th className="p-4 text-right font-medium text-muted-foreground w-28">הקצאה</th>
-                          )}
                           {canManageReminders && (
                             <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
                           )}
@@ -451,6 +448,13 @@ export default function Lineup() {
                                 )}
                               </td>
                               <td className="p-4">
+                                {(item as any).responsible_editor ? (
+                                  <span className="text-sm">{(item as any).responsible_editor.full_name || (item as any).responsible_editor.email}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </td>
+                              <td className="p-4">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button 
@@ -472,13 +476,6 @@ export default function Lineup() {
                                   </TooltipTrigger>
                                   <TooltipContent>לחץ לצפייה בהערות</TooltipContent>
                                 </Tooltip>
-                              </td>
-                              <td className="p-4">
-                                {selectedIssue?.sketch_close_date && (
-                                  <StatusBadge status={getDeadlineStatus(daysLeft)} pulse={daysLeft <= 0}>
-                                    {format(new Date(selectedIssue.sketch_close_date), "dd/MM/yyyy")}
-                                  </StatusBadge>
-                                )}
                               </td>
                               <td className="p-4 text-center">
                                 <Tooltip>
@@ -527,30 +524,7 @@ export default function Lineup() {
                               </td>
                               {canManageReminders && (
                                 <td className="p-4">
-                                  {item.supplier && selectedIssue && (
-                                    <AssignmentButton
-                                      lineupItemId={item.id}
-                                      supplierId={item.supplier_id || null}
-                                      supplierName={item.supplier?.name || null}
-                                      supplierPhone={item.supplier?.phone || null}
-                                      content={item.content}
-                                      pageStart={item.page_start}
-                                      pageEnd={item.page_end}
-                                      magazineName={selectedIssue.magazine?.name || "מגזין"}
-                                      issueNumber={selectedIssue.issue_number}
-                                      issueTheme={selectedIssue.theme}
-                                      issueId={selectedIssue.id}
-                                      designStartDate={selectedIssue.design_start_date}
-                                      editorName={"העורך"}
-                                      assignmentSent={(item as any).assignment_sent}
-                                      assignmentSentDate={(item as any).assignment_sent_date}
-                                    />
-                                  )}
-                                </td>
-                              )}
-                              {canManageReminders && (
-                                <td className="p-4">
-                                  {item.supplier && selectedIssue && (
+                                  {selectedIssue && (
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                                       <LineupRowActions
                                         lineupItemId={item.id}

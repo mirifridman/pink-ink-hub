@@ -292,12 +292,13 @@ export function useLineupItems(issueId: string | undefined) {
         .from("lineup_items")
         .select(`
           *,
-          supplier:suppliers(*)
+          supplier:suppliers(*),
+          responsible_editor:profiles!lineup_items_responsible_editor_id_fkey(id, full_name, email)
         `)
         .eq("issue_id", issueId)
         .order("page_start");
       if (error) throw error;
-      return data as (LineupItem & { supplier: Supplier | null })[];
+      return data as (LineupItem & { supplier: Supplier | null; responsible_editor: { id: string; full_name: string | null; email: string | null } | null })[];
     },
     enabled: !!issueId,
   });
