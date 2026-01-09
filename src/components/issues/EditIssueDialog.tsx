@@ -132,12 +132,12 @@ export const EditIssueDialog = ({ issue, onUpdate }: EditIssueDialogProps) => {
           {isNiflaotKids && (
             <div className="space-y-2">
               <Label>חודש עברי (אופציונלי)</Label>
-              <Select value={hebrewMonth} onValueChange={setHebrewMonth}>
+              <Select value={hebrewMonth || "none"} onValueChange={(val) => setHebrewMonth(val === "none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="בחר חודש עברי" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">ללא חודש עברי</SelectItem>
+                  <SelectItem value="none">ללא חודש עברי</SelectItem>
                   {HEBREW_MONTHS.map((month) => (
                     <SelectItem key={month} value={month}>
                       {month}
