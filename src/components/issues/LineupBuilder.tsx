@@ -885,20 +885,29 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           חזור
         </Button>
         <div className="flex gap-3">
+          {!existingIssueId && (
+            <Button
+              variant="outline"
+              onClick={() => handleSave(true)}
+              disabled={saving}
+            >
+              <Save className="w-4 h-4 ml-2" />
+              שמור כטיוטה
+            </Button>
+          )}
           <Button
-            variant="outline"
-            onClick={() => handleSave(true)}
-            disabled={saving}
-          >
-            <Save className="w-4 h-4 ml-2" />
-            שמור כטיוטה
-          </Button>
-          <Button
-            onClick={() => handleSave(false)}
+            onClick={() => handleSave(!!existingIssueId)}
             disabled={saving}
             className="gradient-neon text-white"
           >
-            צור גיליון
+            {existingIssueId ? (
+              <>
+                <Save className="w-4 h-4 ml-2" />
+                עדכן שינויים
+              </>
+            ) : (
+              "צור גיליון"
+            )}
           </Button>
         </div>
       </div>
