@@ -27,6 +27,7 @@ import { useSuppliers, useCreateSupplier } from "@/hooks/useIssues";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useHasPermission } from "@/hooks/usePermissions";
 import {
   Dialog,
   DialogContent,
@@ -123,6 +124,11 @@ export default function Suppliers() {
   const [filterType, setFilterType] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
+  
+  // Permission checks
+  const canViewBudget = useHasPermission("view_suppliers_budget");
+  const canViewAssignments = useHasPermission("view_suppliers_assignments");
+  const canManageSuppliers = useHasPermission("manage_suppliers");
   
   // Form state
   const [formData, setFormData] = useState({
@@ -279,26 +285,31 @@ export default function Suppliers() {
               <Users className="w-4 h-4" />
               ספקים
             </TabsTrigger>
-            <TabsTrigger value="budget" className="gap-2">
-              <DollarSign className="w-4 h-4" />
-              ניהול תקציב
-            </TabsTrigger>
-            <TabsTrigger value="assignments" className="gap-2">
-              <ClipboardList className="w-4 h-4" />
-              דו״ח הקצאות
-            </TabsTrigger>
+            {canViewBudget && (
+              <TabsTrigger value="budget" className="gap-2">
+                <DollarSign className="w-4 h-4" />
+                ניהול תקציב
+              </TabsTrigger>
+            )}
+            {canViewAssignments && (
+              <TabsTrigger value="assignments" className="gap-2">
+                <ClipboardList className="w-4 h-4" />
+                דו״ח הקצאות
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="suppliers" className="mt-6 space-y-6">
             {/* Add Supplier Button */}
-            <div className="flex justify-end">
-              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gradient-neon text-white neon-shadow" onClick={handleOpenAdd}>
-                    <Plus className="w-4 h-4 ml-2" />
-                    ספק חדש
-                  </Button>
-                </DialogTrigger>
+            {canManageSuppliers && (
+              <div className="flex justify-end">
+                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gradient-neon text-white neon-shadow" onClick={handleOpenAdd}>
+                      <Plus className="w-4 h-4 ml-2" />
+                      ספק חדש
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>{editingSupplier ? "עריכת ספק" : "הוספת ספק חדש"}</DialogTitle>
@@ -410,6 +421,7 @@ export default function Suppliers() {
                 </DialogContent>
               </Dialog>
             </div>
+            )}
 
             {/* Search and Filters */}
             <div className="flex items-center gap-4">
@@ -574,13 +586,17 @@ export default function Suppliers() {
             )}
           </TabsContent>
 
-          <TabsContent value="budget" className="mt-6">
-            <BudgetManagement />
-          </TabsContent>
+          {canViewBudget && (
+            <TabsContent value="budget" className="mt-6">
+              <BudgetManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="assignments" className="mt-6">
-            <SupplierAssignmentsReport />
-          </TabsContent>
+          {canViewAssignments && (
+            <TabsContent value="assignments" className="mt-6">
+              <SupplierAssignmentsReport />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>
