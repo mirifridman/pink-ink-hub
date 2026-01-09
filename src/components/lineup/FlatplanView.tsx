@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
 import { getContentTypeColor, getContentTypeLabel, CONTENT_TYPES } from "./ContentTypeSelect";
 import { cn } from "@/lib/utils";
-import { useUpdateLineupItem } from "@/hooks/useIssues";
+import { useSwapLineupPages, useUpdateLineupPages } from "@/hooks/useIssues";
 import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 
 interface LineupItem {
   id: string;
@@ -10,18 +11,22 @@ interface LineupItem {
   page_end: number;
   content: string;
   content_type?: string | null;
+  design_status?: string | null;
+  is_designed?: boolean;
 }
 
 interface FlatplanViewProps {
   lineupItems: LineupItem[];
   templatePages: number;
+  issueId: string;
   onUpdate: () => void;
 }
 
-export function FlatplanView({ lineupItems, templatePages, onUpdate }: FlatplanViewProps) {
+export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: FlatplanViewProps) {
   const [draggedItem, setDraggedItem] = useState<LineupItem | null>(null);
   const [dragOverPage, setDragOverPage] = useState<number | null>(null);
-  const updateLineupItem = useUpdateLineupItem();
+  const swapLineupPages = useSwapLineupPages();
+  const updateLineupPages = useUpdateLineupPages();
 
   // Create a map of pages to items
   const pageItemMap = new Map<number, LineupItem>();
@@ -77,28 +82,45 @@ export function FlatplanView({ lineupItems, templatePages, onUpdate }: FlatplanV
     }
 
     // Check if target pages are occupied by another item
-    for (let p = targetPageStart; p <= newPageEnd; p++) {
-      const existingItem = pageItemMap.get(p);
-      if (existingItem && existingItem.id !== draggedItem.id) {
-        toast.error("העמודים תפוסים על ידי פריט אחר");
-        return;
+    const targetItem = pageItemMap.get(targetPageStart);
+    
+    if (targetItem && targetItem.id !== draggedItem.id) {
+      // Swap pages between two items
+      try {
+        await swapLineupPages.mutateAsync({
+          item1Id: draggedItem.id,
+          item2Id: targetItem.id,
+          item1Pages: { page_start: draggedItem.page_start, page_end: draggedItem.page_end },
+          item2Pages: { page_start: targetItem.page_start, page_end: targetItem.page_end },
+          issueId,
+        });
+        onUpdate();
+      } catch (error) {
+        toast.error("שגיאה בהחלפת עמודים");
+      }
+    } else {
+      // Move to empty space
+      const wasDesigned = draggedItem.design_status === 'designed' || draggedItem.is_designed === true;
+      try {
+        await updateLineupPages.mutateAsync({
+          id: draggedItem.id,
+          page_start: targetPageStart,
+          page_end: newPageEnd,
+          wasDesigned,
+        });
+        onUpdate();
+        if (wasDesigned) {
+          toast.success("העמודים עודכנו - המעצב יצטרך לאשר מחדש");
+        } else {
+          toast.success("העמודים עודכנו");
+        }
+      } catch (error) {
+        toast.error("שגיאה בעדכון");
       }
     }
 
-    try {
-      await updateLineupItem.mutateAsync({
-        id: draggedItem.id,
-        page_start: targetPageStart,
-        page_end: newPageEnd,
-      });
-      onUpdate();
-      toast.success("העמודים עודכנו");
-    } catch (error) {
-      toast.error("שגיאה בעדכון");
-    }
-
     setDraggedItem(null);
-  }, [draggedItem, templatePages, pageItemMap, updateLineupItem, onUpdate]);
+  }, [draggedItem, templatePages, pageItemMap, swapLineupPages, updateLineupPages, issueId, onUpdate]);
 
   const handleDragEnd = useCallback(() => {
     setDraggedItem(null);
@@ -110,17 +132,19 @@ export function FlatplanView({ lineupItems, templatePages, onUpdate }: FlatplanV
     const isFirstPageOfItem = item && item.page_start === pageNum;
     const isDragOver = dragOverPage === pageNum;
     const isDragging = draggedItem?.id === item?.id;
+    const isStandby = item?.design_status === 'standby';
 
     return (
       <div
         key={pageNum}
         className={cn(
-          "relative h-32 border-2 rounded-lg transition-all duration-200",
+          "relative h-28 border-2 rounded-lg transition-all duration-200",
           item ? getContentTypeColor(item.content_type) : "bg-muted/50",
           item ? "text-white" : "text-muted-foreground",
           isDragOver && "ring-2 ring-primary ring-offset-2",
           isDragging && "opacity-50",
-          isFirstPageOfItem && "cursor-grab active:cursor-grabbing"
+          isFirstPageOfItem && "cursor-grab active:cursor-grabbing",
+          isStandby && "ring-2 ring-orange-500"
         )}
         draggable={!!isFirstPageOfItem}
         onDragStart={isFirstPageOfItem ? (e) => handleDragStart(e, item!) : undefined}
@@ -140,14 +164,19 @@ export function FlatplanView({ lineupItems, templatePages, onUpdate }: FlatplanV
         {/* Content (show only on first page of item) */}
         {isFirstPageOfItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center">
+            {isStandby && (
+              <div className="absolute top-1 left-1" title="ממתין לאישור עימוד מחדש">
+                <AlertTriangle className="w-4 h-4 text-orange-300" />
+              </div>
+            )}
             <span className="text-xs font-medium opacity-80">
               {getContentTypeLabel(item.content_type)}
             </span>
-            <span className="text-sm font-bold line-clamp-2 mt-1">
+            <span className="text-xs font-bold line-clamp-2 mt-0.5">
               {item.content}
             </span>
             {item.page_start !== item.page_end && (
-              <span className="text-xs opacity-70 mt-1">
+              <span className="text-xs opacity-70 mt-0.5">
                 עמ׳ {item.page_start}-{item.page_end}
               </span>
             )}
@@ -182,6 +211,10 @@ export function FlatplanView({ lineupItems, templatePages, onUpdate }: FlatplanV
             <span className="text-xs">{type.label}</span>
           </div>
         ))}
+        <div className="flex items-center gap-1.5 mr-4 pr-4 border-r border-muted">
+          <div className="w-4 h-4 rounded ring-2 ring-orange-500 bg-muted" />
+          <span className="text-xs">ממתין לאישור מחדש</span>
+        </div>
       </div>
 
       {/* Spreads - Multi-column responsive grid */}

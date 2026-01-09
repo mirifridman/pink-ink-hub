@@ -349,6 +349,97 @@ export function useUpdateLineupItem() {
   });
 }
 
+// Swap pages between two lineup items and set both to standby
+export function useSwapLineupPages() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      item1Id, 
+      item2Id, 
+      item1Pages, 
+      item2Pages,
+      issueId 
+    }: { 
+      item1Id: string; 
+      item2Id: string; 
+      item1Pages: { page_start: number; page_end: number };
+      item2Pages: { page_start: number; page_end: number };
+      issueId: string;
+    }) => {
+      // Update item1 with item2's pages and set to standby
+      const { error: error1 } = await supabase
+        .from("lineup_items")
+        .update({ 
+          page_start: item2Pages.page_start,
+          page_end: item2Pages.page_end,
+          design_status: 'standby'
+        })
+        .eq("id", item1Id);
+      if (error1) throw error1;
+      
+      // Update item2 with item1's pages and set to standby
+      const { error: error2 } = await supabase
+        .from("lineup_items")
+        .update({ 
+          page_start: item1Pages.page_start,
+          page_end: item1Pages.page_end,
+          design_status: 'standby'
+        })
+        .eq("id", item2Id);
+      if (error2) throw error2;
+      
+      return issueId;
+    },
+    onSuccess: (issueId) => {
+      queryClient.invalidateQueries({ queryKey: ["lineupItems", issueId] });
+      toast.success("העמודים הוחלפו - המעצב יצטרך לאשר מחדש");
+    },
+    onError: (error) => {
+      toast.error("שגיאה בהחלפת עמודים: " + error.message);
+    },
+  });
+}
+
+// Update lineup item pages and set to standby if was designed
+export function useUpdateLineupPages() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      page_start, 
+      page_end,
+      wasDesigned 
+    }: { 
+      id: string; 
+      page_start: number; 
+      page_end: number;
+      wasDesigned: boolean;
+    }) => {
+      const updates: any = { page_start, page_end };
+      if (wasDesigned) {
+        updates.design_status = 'standby';
+      }
+      
+      const { data, error } = await supabase
+        .from("lineup_items")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["lineupItems", data.issue_id] });
+    },
+    onError: (error) => {
+      toast.error("שגיאה בעדכון עמודים: " + error.message);
+    },
+  });
+}
+
 export function useDeleteLineupItem() {
   const queryClient = useQueryClient();
   

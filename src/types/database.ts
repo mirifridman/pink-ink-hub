@@ -36,6 +36,8 @@ export interface Supplier {
   updated_at: string;
 }
 
+export type DesignStatus = 'pending' | 'designed' | 'standby';
+
 export interface LineupItem {
   id: string;
   issue_id: string;
@@ -48,6 +50,7 @@ export interface LineupItem {
   text_ready: boolean;
   files_ready: boolean;
   is_designed: boolean;
+  design_status: DesignStatus;
   designer_notes?: string;
   created_at: string;
   updated_at: string;
@@ -64,16 +67,18 @@ export interface Insert {
   text_ready: boolean;
   files_ready: boolean;
   is_designed: boolean;
+  design_status: DesignStatus;
   designer_notes?: string;
   created_at: string;
   updated_at: string;
   supplier?: Supplier;
 }
 
-export type RowColor = 'yellow' | 'green' | 'white';
+export type RowColor = 'yellow' | 'green' | 'white' | 'orange';
 
 export function getRowColor(item: LineupItem | Insert): RowColor {
-  if (item.is_designed) return 'yellow';
+  if (item.design_status === 'standby') return 'orange';
+  if (item.design_status === 'designed' || item.is_designed) return 'yellow';
   if (item.text_ready || item.files_ready) return 'green';
   return 'white';
 }

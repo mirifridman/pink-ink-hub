@@ -170,6 +170,7 @@ export type Database = {
           content_type: string | null
           created_at: string
           description: string | null
+          design_status: string
           designer_notes: string | null
           files_ready: boolean
           id: string
@@ -189,6 +190,7 @@ export type Database = {
           content_type?: string | null
           created_at?: string
           description?: string | null
+          design_status?: string
           designer_notes?: string | null
           files_ready?: boolean
           id?: string
@@ -208,6 +210,7 @@ export type Database = {
           content_type?: string | null
           created_at?: string
           description?: string | null
+          design_status?: string
           designer_notes?: string | null
           files_ready?: boolean
           id?: string
@@ -428,6 +431,7 @@ export type Database = {
           content: string
           content_type: string | null
           created_at: string
+          design_status: string
           designer_notes: string | null
           files_ready: boolean
           id: string
@@ -449,6 +453,7 @@ export type Database = {
           content: string
           content_type?: string | null
           created_at?: string
+          design_status?: string
           designer_notes?: string | null
           files_ready?: boolean
           id?: string
@@ -470,6 +475,7 @@ export type Database = {
           content?: string
           content_type?: string | null
           created_at?: string
+          design_status?: string
           designer_notes?: string | null
           files_ready?: boolean
           id?: string
