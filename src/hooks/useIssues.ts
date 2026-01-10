@@ -367,45 +367,18 @@ export function useSwapLineupPages() {
       item2Pages: { page_start: number; page_end: number };
       issueId: string;
     }) => {
-      // To avoid CHECK constraint violations, we move item1 to high temporary pages (9000+),
-      // then move item2 to item1's pages, then move item1 to item2's original pages
+      // Use the database function to swap pages atomically
+      // This bypasses the check_page_overlap trigger by using SECURITY DEFINER
+      const { error } = await supabase.rpc('swap_lineup_pages', {
+        p_item1_id: item1Id,
+        p_item2_id: item2Id,
+        p_item1_new_page_start: item2Pages.page_start,
+        p_item1_new_page_end: item2Pages.page_end,
+        p_item2_new_page_start: item1Pages.page_start,
+        p_item2_new_page_end: item1Pages.page_end,
+      });
       
-      // Calculate temp pages that are definitely not in use
-      const tempPageStart = 9000;
-      const pageSpan1 = item1Pages.page_end - item1Pages.page_start;
-      const tempPageEnd = tempPageStart + pageSpan1;
-      
-      // Step 1: Move item1 to temporary high pages to avoid overlap
-      const { error: error1 } = await supabase
-        .from("lineup_items")
-        .update({ 
-          page_start: tempPageStart,
-          page_end: tempPageEnd,
-        })
-        .eq("id", item1Id);
-      if (error1) throw error1;
-      
-      // Step 2: Update item2 with item1's original pages
-      const { error: error2 } = await supabase
-        .from("lineup_items")
-        .update({ 
-          page_start: item1Pages.page_start,
-          page_end: item1Pages.page_end,
-          design_status: 'standby'
-        })
-        .eq("id", item2Id);
-      if (error2) throw error2;
-      
-      // Step 3: Update item1 with item2's original pages
-      const { error: error3 } = await supabase
-        .from("lineup_items")
-        .update({ 
-          page_start: item2Pages.page_start,
-          page_end: item2Pages.page_end,
-          design_status: 'standby'
-        })
-        .eq("id", item1Id);
-      if (error3) throw error3;
+      if (error) throw error;
       
       return issueId;
     },

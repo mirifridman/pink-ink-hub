@@ -977,6 +977,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      swap_lineup_pages: {
+        Args: {
+          p_item1_id: string
+          p_item1_new_page_end: number
+          p_item1_new_page_start: number
+          p_item2_id: string
+          p_item2_new_page_end: number
+          p_item2_new_page_start: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "designer" | "editor" | "publisher" | "social"
