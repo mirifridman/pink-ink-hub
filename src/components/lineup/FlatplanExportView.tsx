@@ -46,7 +46,7 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
     // Page 1 is always alone (cover)
     spreads.push({ right: 1, left: null });
     
-    // Rest of pages in pairs
+    // Rest of pages in pairs - right page is EVEN (lower), left page is ODD (higher)
     for (let i = 2; i <= templatePages; i += 2) {
       spreads.push({ 
         right: i, 
@@ -54,8 +54,8 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
       });
     }
 
-    // Split spreads into pages (8 spreads per A4 page for portrait)
-    const SPREADS_PER_PAGE = 8;
+    // Split spreads into pages (12 spreads per A4 page for compact layout)
+    const SPREADS_PER_PAGE = 12;
     const pages: typeof spreads[] = [];
     for (let i = 0; i < spreads.length; i += SPREADS_PER_PAGE) {
       pages.push(spreads.slice(i, i + SPREADS_PER_PAGE));
@@ -69,30 +69,30 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
         <div
           key={pageNum}
           className={cn(
-            "relative h-16 border rounded transition-all",
+            "relative border rounded",
             item ? getContentTypeColor(item.content_type) : "bg-gray-100",
             item ? "text-white" : "text-gray-500"
           )}
           style={{ 
-            minHeight: '60px',
+            height: '48px',
             borderColor: 'rgba(0,0,0,0.15)'
           }}
         >
           {/* Page number */}
           <div className={cn(
-            "absolute top-0.5 right-0.5 text-[9px] font-bold rounded px-1",
-            item ? "bg-black/20" : "bg-gray-200"
+            "absolute top-0 right-0.5 text-[8px] font-bold",
+            item ? "text-white/80" : "text-gray-400"
           )}>
             {pageNum}
           </div>
 
           {/* Content (show only on first page of item) */}
           {isFirstPageOfItem && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-1 text-center">
-              <span className="text-[8px] font-medium opacity-80">
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-0.5 pt-2 text-center">
+              <span className="text-[6px] font-medium opacity-80 leading-tight">
                 {getContentTypeLabel(item.content_type)}
               </span>
-              <span className="text-[9px] font-bold line-clamp-2">
+              <span className="text-[7px] font-bold line-clamp-2 leading-tight">
                 {item.content}
               </span>
             </div>
@@ -101,14 +101,14 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
           {/* Empty page indicator */}
           {!item && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[9px]">ריק</span>
+              <span className="text-[8px]">ריק</span>
             </div>
           )}
 
           {/* Multi-page indicator */}
           {item && !isFirstPageOfItem && (
             <div className="absolute inset-0 flex items-center justify-center opacity-50">
-              <span className="text-[9px]">← המשך</span>
+              <span className="text-[7px]">←</span>
             </div>
           )}
         </div>
@@ -130,7 +130,7 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
             key={pageIndex}
             style={{ 
               minHeight: '297mm',
-              padding: '12mm',
+              padding: '8mm',
               pageBreakAfter: pageIndex < pages.length - 1 ? 'always' : 'auto',
               boxSizing: 'border-box'
             }}
@@ -139,11 +139,11 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
             {pageIndex === 0 && (
               <>
                 {/* Issue Details Header */}
-                <div className="mb-6 pb-4 border-b-2 border-gray-300">
-                  <h1 className="text-2xl font-bold text-gray-800 mb-3">
+                <div className="mb-3 pb-2 border-b-2 border-gray-300">
+                  <h1 className="text-lg font-bold text-gray-800 mb-2">
                     דו"ח ליינאפ - תצוגה ויזואלית
                   </h1>
-                  <div className="flex flex-wrap gap-6 text-sm">
+                  <div className="flex flex-wrap gap-4 text-xs">
                     <div>
                       <span className="text-gray-500">מגזין:</span>{" "}
                       <span className="font-semibold">{issue.magazine?.name}</span>
@@ -166,16 +166,16 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
                 </div>
 
                 {/* Legend */}
-                <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">מקרא סוגי תכנים:</h3>
-                  <div className="flex flex-wrap gap-3">
+                <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-200">
+                  <h3 className="text-xs font-semibold text-gray-700 mb-1">מקרא:</h3>
+                  <div className="flex flex-wrap gap-2">
                     {CONTENT_TYPES.map((type) => (
-                      <div key={type.value} className="flex items-center gap-1.5">
+                      <div key={type.value} className="flex items-center gap-1">
                         <div 
-                          className={cn("w-4 h-4 rounded", type.color)} 
+                          className={cn("w-3 h-3 rounded", type.color)} 
                           style={{ border: '1px solid rgba(0,0,0,0.1)' }}
                         />
-                        <span className="text-xs text-gray-700">{type.label}</span>
+                        <span className="text-[10px] text-gray-700">{type.label}</span>
                       </div>
                     ))}
                   </div>
@@ -185,23 +185,25 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
 
             {/* Page indicator for multi-page exports */}
             {pages.length > 1 && pageIndex > 0 && (
-              <div className="mb-4 text-sm text-gray-500">
+              <div className="mb-2 text-xs text-gray-500">
                 המשך - עמוד {pageIndex + 1} מתוך {pages.length}
               </div>
             )}
 
-            {/* Spreads Grid */}
-            <div className="grid grid-cols-4 gap-3">
+            {/* Spreads Grid - 6 columns, compact */}
+            <div className="grid grid-cols-6 gap-1">
               {pageSpreads.map((spread, idx) => (
                 <div 
                   key={idx} 
-                  className="flex flex-row-reverse justify-center gap-0.5 p-1.5 bg-gray-50 rounded border border-gray-200"
+                  className="flex justify-center gap-px p-1 bg-gray-50 rounded border border-gray-200"
                 >
-                  <div className={cn("w-16", !spread.left && "mx-auto")}>
+                  {/* Right page (lower number) on the right side */}
+                  <div className={cn("w-12", !spread.left && "mx-auto")}>
                     {renderPage(spread.right)}
                   </div>
+                  {/* Left page (higher number) on the left side */}
                   {spread.left && (
-                    <div className="w-16">
+                    <div className="w-12">
                       {renderPage(spread.left)}
                     </div>
                   )}
@@ -210,7 +212,7 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
             </div>
 
             {/* Footer */}
-            <div className="mt-auto pt-4 text-center text-xs text-gray-400" style={{ marginTop: '20mm' }}>
+            <div className="mt-4 pt-2 text-center text-[10px] text-gray-400">
               הופק בתאריך: {format(new Date(), "dd/MM/yyyy HH:mm", { locale: he })}
             </div>
           </div>
