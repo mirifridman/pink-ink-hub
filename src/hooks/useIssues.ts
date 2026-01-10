@@ -367,9 +367,7 @@ export function useSwapLineupPages() {
       item2Pages: { page_start: number; page_end: number };
       issueId: string;
     }) => {
-      // Use the database function to swap pages atomically
-      // This bypasses the check_page_overlap trigger by using SECURITY DEFINER
-      const { error } = await supabase.rpc('swap_lineup_pages', {
+      console.log("swap_lineup_pages RPC call:", {
         p_item1_id: item1Id,
         p_item2_id: item2Id,
         p_item1_new_page_start: item2Pages.page_start,
@@ -377,6 +375,19 @@ export function useSwapLineupPages() {
         p_item2_new_page_start: item1Pages.page_start,
         p_item2_new_page_end: item1Pages.page_end,
       });
+      
+      // Use the database function to swap pages atomically
+      // This bypasses the check_page_overlap trigger by using SECURITY DEFINER
+      const { data, error } = await supabase.rpc('swap_lineup_pages', {
+        p_item1_id: item1Id,
+        p_item2_id: item2Id,
+        p_item1_new_page_start: item2Pages.page_start,
+        p_item1_new_page_end: item2Pages.page_end,
+        p_item2_new_page_start: item1Pages.page_start,
+        p_item2_new_page_end: item1Pages.page_end,
+      });
+      
+      console.log("swap_lineup_pages result:", { data, error });
       
       if (error) throw error;
       
