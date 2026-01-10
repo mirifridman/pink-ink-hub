@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { getContentTypeColor, getContentTypeLabel, CONTENT_TYPES } from "./ContentTypeSelect";
 import { cn } from "@/lib/utils";
 import { useSwapLineupPages, useUpdateLineupPages } from "@/hooks/useIssues";
@@ -28,13 +28,16 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
   const swapLineupPages = useSwapLineupPages();
   const updateLineupPages = useUpdateLineupPages();
 
-  // Create a map of pages to items
-  const pageItemMap = new Map<number, LineupItem>();
-  lineupItems.forEach(item => {
-    for (let p = item.page_start; p <= item.page_end; p++) {
-      pageItemMap.set(p, item);
-    }
-  });
+  // Create a map of pages to items - memoized to be stable for callbacks
+  const pageItemMap = useMemo(() => {
+    const map = new Map<number, LineupItem>();
+    lineupItems.forEach(item => {
+      for (let p = item.page_start; p <= item.page_end; p++) {
+        map.set(p, item);
+      }
+    });
+    return map;
+  }, [lineupItems]);
 
   // Generate page pairs (spreads)
   const spreads: { left: number | null; right: number | null }[] = [];
@@ -51,6 +54,7 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
   }
 
   const handleDragStart = useCallback((e: React.DragEvent, item: LineupItem) => {
+    console.log("DragStart:", item.id, item.content, "pages:", item.page_start, "-", item.page_end);
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', item.id);
@@ -70,24 +74,38 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
     e.preventDefault();
     setDragOverPage(null);
 
-    if (!draggedItem) return;
+    // Get the dragged item ID from dataTransfer as backup
+    const draggedItemId = e.dataTransfer.getData('text/plain');
+    console.log("HandleDrop:", dropPageNum, "draggedItemId from dataTransfer:", draggedItemId, "draggedItem state:", draggedItem?.id);
+
+    // Use the dragged item from state, or find it from lineupItems using the ID
+    const sourceDraggedItem = draggedItem || lineupItems.find(item => item.id === draggedItemId);
+    
+    if (!sourceDraggedItem) {
+      console.log("No dragged item found, returning");
+      setDraggedItem(null);
+      return;
+    }
 
     // Get the item at the drop location (if any)
     const targetItem = pageItemMap.get(dropPageNum);
+    console.log("Target item:", targetItem?.id, targetItem?.content);
     
     // If dropping on self, do nothing
-    if (targetItem?.id === draggedItem.id) {
+    if (targetItem?.id === sourceDraggedItem.id) {
+      console.log("Dropping on self, returning");
       setDraggedItem(null);
       return;
     }
 
     if (targetItem) {
       // Swap pages between two items - use the actual first pages of each item
+      console.log("Swapping pages:", sourceDraggedItem.id, "with", targetItem.id);
       try {
         await swapLineupPages.mutateAsync({
-          item1Id: draggedItem.id,
+          item1Id: sourceDraggedItem.id,
           item2Id: targetItem.id,
-          item1Pages: { page_start: draggedItem.page_start, page_end: draggedItem.page_end },
+          item1Pages: { page_start: sourceDraggedItem.page_start, page_end: sourceDraggedItem.page_end },
           item2Pages: { page_start: targetItem.page_start, page_end: targetItem.page_end },
           issueId,
         });
@@ -99,7 +117,7 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
       }
     } else {
       // Move to empty space - use the drop page as the new start
-      const pageSpan = draggedItem.page_end - draggedItem.page_start;
+      const pageSpan = sourceDraggedItem.page_end - sourceDraggedItem.page_start;
       const newPageEnd = dropPageNum + pageSpan;
 
       // Check if target pages are valid
@@ -112,17 +130,18 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
       // Check if any pages in the new range are occupied (except by dragged item)
       for (let p = dropPageNum; p <= newPageEnd; p++) {
         const occupyingItem = pageItemMap.get(p);
-        if (occupyingItem && occupyingItem.id !== draggedItem.id) {
+        if (occupyingItem && occupyingItem.id !== sourceDraggedItem.id) {
           toast.error("העמודים תפוסים");
           setDraggedItem(null);
           return;
         }
       }
 
-      const wasDesigned = draggedItem.design_status === 'designed' || draggedItem.is_designed === true;
+      const wasDesigned = sourceDraggedItem.design_status === 'designed' || sourceDraggedItem.is_designed === true;
+      console.log("Moving to empty space:", dropPageNum, "-", newPageEnd);
       try {
         await updateLineupPages.mutateAsync({
-          id: draggedItem.id,
+          id: sourceDraggedItem.id,
           page_start: dropPageNum,
           page_end: newPageEnd,
           wasDesigned,
@@ -140,7 +159,7 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
     }
 
     setDraggedItem(null);
-  }, [draggedItem, templatePages, pageItemMap, swapLineupPages, updateLineupPages, issueId, onUpdate]);
+  }, [draggedItem, lineupItems, templatePages, pageItemMap, swapLineupPages, updateLineupPages, issueId, onUpdate]);
 
   const handleDragEnd = useCallback(() => {
     setDraggedItem(null);
