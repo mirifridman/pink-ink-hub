@@ -10,8 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Lock, LogOut, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Save, Lock, LogOut, User, Eye, EyeOff, Loader2, Sun, Moon, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
 
 const roleLabels: Record<string, string> = {
@@ -32,6 +33,7 @@ const roleColors: Record<string, string> = {
 
 export default function ProfilePage() {
   const { user, role, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -324,6 +326,65 @@ export default function ProfilePage() {
                 {saving ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
                 שמור העדפות
               </Button>
+            </div>
+
+            {/* Theme Selection */}
+            <Separator />
+            <div className="space-y-4">
+              <Label className="text-lg font-bold">נראות</Label>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => setTheme("light")}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    theme === "light" 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <Sun className={`w-6 h-6 ${theme === "light" ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-sm font-medium ${theme === "light" ? "text-primary" : "text-muted-foreground"}`}>
+                    בהיר
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setTheme("dark")}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    theme === "dark" 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <Moon className={`w-6 h-6 ${theme === "dark" ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-sm font-medium ${theme === "dark" ? "text-primary" : "text-muted-foreground"}`}>
+                    כהה
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setTheme("system")}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    theme === "system" 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <Monitor className={`w-6 h-6 ${theme === "system" ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-sm font-medium ${theme === "system" ? "text-primary" : "text-muted-foreground"}`}>
+                    אוטומטי
+                  </span>
+                </button>
+              </div>
+
+              <p className="text-sm text-muted-foreground text-center">
+                {theme === "system" 
+                  ? "הנראות תשתנה אוטומטית לפי הגדרות המערכת" 
+                  : theme === "dark" 
+                    ? "נראות כהה פעילה" 
+                    : "נראות בהירה פעילה"
+                }
+              </p>
             </div>
 
             {/* Logout */}
