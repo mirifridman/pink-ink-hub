@@ -302,15 +302,30 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   };
 
   const executeSwap = async () => {
+    console.log("executeSwap called", { swapSourceRow, swapTargetId, existingIssueId });
     if (swapSourceRow && swapTargetId) {
       const targetRow = lineupRows.find(r => r.id === swapTargetId);
+      console.log("targetRow found:", targetRow);
       if (!targetRow) return;
 
+      const isExistingIssue = !!existingIssueId;
+      const isSourceNew = swapSourceRow.id.startsWith('new-');
+      const isTargetNew = swapTargetId.startsWith('new-');
+      console.log("Conditions:", { isExistingIssue, isSourceNew, isTargetNew });
+
       // For existing issues, persist to database immediately
-      if (existingIssueId && !swapSourceRow.id.startsWith('new-') && !swapTargetId.startsWith('new-')) {
+      if (isExistingIssue && !isSourceNew && !isTargetNew) {
         try {
           const sourcePages = [...swapSourceRow.pages].sort((a, b) => a - b);
           const targetPages = [...targetRow.pages].sort((a, b) => a - b);
+          
+          console.log("Calling swapLineupPages.mutateAsync with:", {
+            item1Id: swapSourceRow.id,
+            item2Id: swapTargetId,
+            item1Pages: { page_start: sourcePages[0], page_end: sourcePages[sourcePages.length - 1] },
+            item2Pages: { page_start: targetPages[0], page_end: targetPages[targetPages.length - 1] },
+            issueId: existingIssueId,
+          });
           
           await swapLineupPages.mutateAsync({
             item1Id: swapSourceRow.id,
@@ -319,6 +334,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             item2Pages: { page_start: targetPages[0], page_end: targetPages[targetPages.length - 1] },
             issueId: existingIssueId,
           });
+          
+          console.log("swapLineupPages.mutateAsync succeeded!");
           
           // Update local state to reflect the swap
           swapRowPages(swapSourceRow.id, swapTargetId);
@@ -331,6 +348,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         }
       } else {
         // For new issues or new rows, just update local state
+        console.log("Local state swap only (new rows or no existing issue)");
         swapRowPages(swapSourceRow.id, swapTargetId);
         setShowSwapModal(false);
         setSwapSourceRow(null);
