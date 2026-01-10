@@ -18,6 +18,7 @@ import { he } from "date-fns/locale";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
 import { cn } from "@/lib/utils";
+import { getContentTypeLabel } from "@/components/lineup/ContentTypeSelect";
 
 interface SupplierAssignment {
   supplier_id: string;
@@ -35,6 +36,7 @@ interface SupplierAssignment {
   insert_id?: string;
   created_at: string;
   amount: number;
+  content_type: string | null;
 }
 
 type ReportType = "detailed" | "summary";
@@ -64,6 +66,7 @@ export function SupplierAssignmentsReport() {
           supplier_id,
           issue_id,
           created_at,
+          content_type,
           suppliers (id, name, supplier_type),
           issues (id, issue_number, theme, magazine_id, magazines (name))
         `)
@@ -80,6 +83,7 @@ export function SupplierAssignmentsReport() {
           supplier_id,
           issue_id,
           created_at,
+          content_type,
           suppliers (id, name, supplier_type),
           issues (id, issue_number, theme, magazine_id, magazines (name))
         `)
@@ -129,6 +133,7 @@ export function SupplierAssignmentsReport() {
             lineup_item_id: item.id,
             created_at: item.created_at,
             amount: lineupBudgetMap.get(item.id) || 0,
+            content_type: item.content_type,
           });
         }
       });
@@ -151,6 +156,7 @@ export function SupplierAssignmentsReport() {
             insert_id: item.id,
             created_at: item.created_at,
             amount: insertBudgetMap.get(item.id) || 0,
+            content_type: item.content_type,
           });
         }
       });
@@ -404,7 +410,7 @@ export function SupplierAssignmentsReport() {
       </div>
 
       {/* Report Content */}
-      <div ref={reportRef} className="bg-white text-gray-900 p-6 rounded-lg">
+      <div ref={reportRef} dir="rtl" className="bg-white text-gray-900 p-6 rounded-lg">
         {/* Report Header */}
         <div className="mb-6 text-center border-b pb-4">
           <h2 className="text-xl font-bold text-gray-900">דו״ח הקצאות ספקים</h2>
@@ -471,7 +477,7 @@ export function SupplierAssignmentsReport() {
                               </td>
                               <td className="p-2">
                                 <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
-                                  {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
+                                  {assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-')}
                                 </span>
                               </td>
                               <td className="p-2 text-gray-800 font-medium">
@@ -557,7 +563,7 @@ export function SupplierAssignmentsReport() {
                               </td>
                               <td className="p-2">
                                 <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
-                                  {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
+                                  {assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-')}
                                 </span>
                               </td>
                               <td className="p-2 text-gray-800 font-medium">
