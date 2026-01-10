@@ -176,3 +176,21 @@
     @apply bg-sky-500/10 text-sky-600 border-sky-500/20;
   }
 }
+
+/* Grid Menu custom scrollbar */
+.grid-menu-overlay::-webkit-scrollbar {
+  width: 6px;
+}
+
+.grid-menu-overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.grid-menu-overlay::-webkit-scrollbar-thumb {
+  background: hsl(var(--neon-pink) / 0.3);
+  border-radius: 3px;
+}
+
+.grid-menu-overlay::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--neon-pink) / 0.5);
+}
