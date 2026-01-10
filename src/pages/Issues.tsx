@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, BookOpen, Calendar, Users, ChevronLeft, Lock } from "lucide-react";
-import { Link } from "react-router-dom";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useAuth } from "@/hooks/useAuth";
 import { useIssues, useIssue, useLineupItems } from "@/hooks/useIssues";
 import { NewIssueModal, NewIssueData } from "@/components/issues/NewIssueModal";
 import { LineupBuilder } from "@/components/issues/LineupBuilder";
-import { IssueView } from "@/components/issues/IssueView";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -21,10 +20,10 @@ export default function Issues() {
   const { role } = useAuth();
   const { data: issues, isLoading } = useIssues();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   
-  const viewIssueId = searchParams.get("view");
   const editIssueId = searchParams.get("edit");
-  const { data: viewIssue } = useIssue(viewIssueId || undefined);
+  const viewIssueId = searchParams.get("view");
   const { data: editIssue } = useIssue(editIssueId || undefined);
   
   const [showNewIssueModal, setShowNewIssueModal] = useState(false);
@@ -33,6 +32,13 @@ export default function Issues() {
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
 
   const canCreateIssue = role === "admin" || role === "editor";
+
+  // Redirect view parameter to lineup page
+  useEffect(() => {
+    if (viewIssueId) {
+      navigate(`/lineup?issue=${viewIssueId}`, { replace: true });
+    }
+  }, [viewIssueId, navigate]);
 
   const handleContinueToLineup = (data: NewIssueData) => {
     setNewIssueData(data);
@@ -45,32 +51,6 @@ export default function Issues() {
     setNewIssueData(null);
     setEditingIssueId(null);
     setSearchParams({});
-  };
-
-  const handleBackFromView = () => {
-    setSearchParams({});
-  };
-
-  const handleEditDraft = () => {
-    if (!viewIssue) return;
-    
-    // Convert the issue back to NewIssueData format for editing
-    const issueData: NewIssueData = {
-      magazine_id: viewIssue.magazine_id,
-      issue_number: viewIssue.issue_number,
-      template_pages: viewIssue.template_pages as 52 | 68,
-      distribution_month: new Date(viewIssue.distribution_month),
-      theme: viewIssue.theme,
-      design_start_date: new Date(viewIssue.design_start_date),
-      sketch_close_date: new Date(viewIssue.sketch_close_date),
-      print_date: new Date(viewIssue.print_date),
-      editor_ids: [],
-    };
-    
-    setNewIssueData(issueData);
-    setEditingIssueId(viewIssue.id);
-    setSearchParams({});
-    setShowLineupBuilder(true);
   };
 
   // Handle edit from URL parameter (e.g., from Lineup page)
@@ -94,19 +74,6 @@ export default function Issues() {
       setShowLineupBuilder(true);
     }
   }, [editIssue, showLineupBuilder]);
-
-  // Show issue view if viewIssueId is set
-  if (viewIssueId && viewIssue) {
-    return (
-      <AppLayout>
-        <IssueView 
-          issue={viewIssue} 
-          onBack={handleBackFromView} 
-          onEditDraft={handleEditDraft}
-        />
-      </AppLayout>
-    );
-  }
 
   const activeIssues = issues?.filter(i => i.status === "in_progress" || i.status === "draft") || [];
   const completedIssues = issues?.filter(i => i.status === "completed") || [];
@@ -179,7 +146,7 @@ export default function Issues() {
                 <NeonCard 
                   key={issue.id} 
                   className="group cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => setSearchParams({ view: issue.id })}
+                  onClick={() => navigate(`/lineup?issue=${issue.id}`)}
                 >
                   <NeonCardContent className="p-4">
                     <div className="flex items-center gap-4">
@@ -212,6 +179,10 @@ export default function Issues() {
       {/* Lineup Builder Dialog */}
       <Dialog open={showLineupBuilder} onOpenChange={handleCloseBuilder}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <VisuallyHidden>
+            <DialogTitle>בניית ליינאפ</DialogTitle>
+            <DialogDescription>עריכה או יצירה של ליינאפ לגיליון</DialogDescription>
+          </VisuallyHidden>
           {newIssueData && (
             <LineupBuilder
               issueData={newIssueData}
