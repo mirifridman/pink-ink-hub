@@ -392,13 +392,11 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       let issueId = savedIssueId;
       
       if (existingIssueId) {
-        // Update existing issue - only change status if saving as draft
-        if (asDraft) {
-          await updateIssue.mutateAsync({
-            id: existingIssueId,
-            status: "draft",
-          });
-        }
+        // Update existing issue status based on save type
+        await updateIssue.mutateAsync({
+          id: existingIssueId,
+          status: asDraft ? "draft" : "in_progress",
+        });
         issueId = existingIssueId;
         
         // For existing issues, we need to update/create/delete lineup items
