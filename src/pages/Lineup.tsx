@@ -242,15 +242,15 @@ export default function Lineup() {
 
   const isLoading = issuesLoading || lineupLoading;
 
-  // Get item status color for row highlighting
+  // Get item status color for row highlighting (light theme)
   const getItemStatusColor = (item: NonNullable<typeof lineupItems>[number]) => {
     if (item.is_designed) {
-      return 'border-r-4 border-r-amber-400 bg-amber-50/50 dark:bg-amber-900/10';
+      return 'border-r-4 border-r-amber-400 bg-amber-50';
     }
     if (item.text_ready || item.files_ready) {
-      return 'border-r-4 border-r-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10';
+      return 'border-r-4 border-r-emerald-400 bg-emerald-50';
     }
-    return 'border-r-4 border-r-muted';
+    return 'border-r-4 border-r-gray-200';
   };
 
   return (
@@ -463,57 +463,57 @@ export default function Lineup() {
             </TabsList>
 
             <TabsContent value="table" className="mt-4">
-              {/* Lineup Table */}
-              <NeonCard>
-                <NeonCardContent className="p-0 overflow-x-auto">
+              {/* Lineup Table - Light Theme */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-0 overflow-x-auto">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                      <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                     </div>
                   ) : !effectiveIssueId ? (
-                    <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-center py-12 text-gray-500">
                       אין גליונות פעילים. צור גליון חדש בעמוד הגיליונות.
                     </div>
                   ) : lineupItems?.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-center py-12 text-gray-500">
                       אין פריטים בליינאפ של גליון זה.
                     </div>
                   ) : (
                     <table className="w-full" dir="rtl">
                       <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
-                          <th className="p-4 text-right font-medium text-muted-foreground w-20">עמודים</th>
-                          <th className="p-4 text-right font-medium text-muted-foreground w-24">סוג</th>
-                          <th className="p-4 text-right font-medium text-muted-foreground">תוכן</th>
-                          <th className="p-4 text-right font-medium text-muted-foreground w-32">ספק</th>
-                          <th className="p-4 text-right font-medium text-muted-foreground w-28">עורך אחראי</th>
-                          <th className="p-4 text-right font-medium text-muted-foreground w-12">
+                        <tr className="border-b border-gray-200 bg-gray-50">
+                          <th className="p-4 text-right font-medium text-gray-600 w-12"></th>
+                          <th className="p-4 text-right font-medium text-gray-600 w-20">עמודים</th>
+                          <th className="p-4 text-right font-medium text-gray-600 w-24">סוג</th>
+                          <th className="p-4 text-right font-medium text-gray-600">תוכן</th>
+                          <th className="p-4 text-right font-medium text-gray-600 w-32">ספק</th>
+                          <th className="p-4 text-right font-medium text-gray-600 w-28">עורך אחראי</th>
+                          <th className="p-4 text-right font-medium text-gray-600 w-12">
                             <Tooltip>
                               <TooltipTrigger>💬</TooltipTrigger>
                               <TooltipContent>הערות</TooltipContent>
                             </Tooltip>
                           </th>
-                          <th className="p-4 text-center font-medium text-muted-foreground w-16">
+                          <th className="p-4 text-center font-medium text-gray-600 w-16">
                             <Tooltip>
                               <TooltipTrigger>📄</TooltipTrigger>
                               <TooltipContent>טקסט מוכן</TooltipContent>
                             </Tooltip>
                           </th>
-                          <th className="p-4 text-center font-medium text-muted-foreground w-16">
+                          <th className="p-4 text-center font-medium text-gray-600 w-16">
                             <Tooltip>
                               <TooltipTrigger>📁</TooltipTrigger>
                               <TooltipContent>קבצים מוכנים</TooltipContent>
                             </Tooltip>
                           </th>
-                          <th className="p-4 text-center font-medium text-muted-foreground w-16">
+                          <th className="p-4 text-center font-medium text-gray-600 w-16">
                             <Tooltip>
                               <TooltipTrigger>🎨</TooltipTrigger>
                               <TooltipContent>עיצוב הושלם</TooltipContent>
                             </Tooltip>
                           </th>
                           {canManageReminders && (
-                            <th className="p-4 text-right font-medium text-muted-foreground w-12"></th>
+                            <th className="p-4 text-right font-medium text-gray-600 w-12"></th>
                           )}
                         </tr>
                       </thead>
@@ -531,10 +531,10 @@ export default function Lineup() {
                             <tr
                               key={item.id}
                               className={cn(
-                                "border-b last:border-b-0 hover:bg-muted/50 transition-colors group",
+                                "border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors group text-gray-700",
                                 getItemStatusColor(item),
-                                daysLeft <= 0 && !item.is_designed && !item.text_ready && !item.files_ready && "bg-red-50/50 dark:bg-red-900/10",
-                                daysLeft > 0 && daysLeft <= 2 && !item.is_designed && !item.text_ready && !item.files_ready && "bg-orange-50/50 dark:bg-orange-900/10"
+                                daysLeft <= 0 && !item.is_designed && !item.text_ready && !item.files_ready && "bg-red-50",
+                                daysLeft > 0 && daysLeft <= 2 && !item.is_designed && !item.text_ready && !item.files_ready && "bg-orange-50"
                               )}
                             >
                               <td className="p-4">
@@ -542,15 +542,15 @@ export default function Lineup() {
                                   <ReminderStatusIcon lineupItemId={item.id} />
                                 )}
                               </td>
-                              <td className="p-4 text-muted-foreground">{pages}</td>
+                              <td className="p-4 text-gray-500">{pages}</td>
                               <td className="p-4">
                                 {(item as any).content_type ? (
                                   <div className="flex items-center gap-1.5">
                                     <div className={cn("w-3 h-3 rounded-sm", getContentTypeColor((item as any).content_type))} />
-                                    <span className="text-xs">{getContentTypeLabel((item as any).content_type)}</span>
+                                    <span className="text-xs text-gray-600">{getContentTypeLabel((item as any).content_type)}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground text-xs">-</span>
+                                  <span className="text-gray-400 text-xs">-</span>
                                 )}
                               </td>
                               <td className="p-4">
@@ -561,9 +561,10 @@ export default function Lineup() {
                                     initialValue={item.content}
                                     placeholder="תוכן"
                                     onUpdate={() => refetchLineup()}
+                                    lightTheme
                                   />
                                 ) : (
-                                  <span className="font-medium">{item.content}</span>
+                                  <span className="font-medium text-gray-800">{item.content}</span>
                                 )}
                               </td>
                               <td className="p-4">
@@ -577,21 +578,21 @@ export default function Lineup() {
                                       <div className="flex flex-col gap-1">
                                         {suppliers.map((supplier: any, idx: number) => (
                                           <div key={idx} className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm">{supplier?.name || '-'}</span>
+                                            <User className="w-4 h-4 text-gray-400" />
+                                            <span className="text-sm text-gray-700">{supplier?.name || '-'}</span>
                                           </div>
                                         ))}
                                       </div>
                                     );
                                   }
-                                  return <span className="text-muted-foreground text-sm">-</span>;
+                                  return <span className="text-gray-400 text-sm">-</span>;
                                 })()}
                               </td>
                               <td className="p-4">
                                 {(item as any).responsible_editor ? (
-                                  <span className="text-sm">{(item as any).responsible_editor.full_name || (item as any).responsible_editor.email}</span>
+                                  <span className="text-sm text-gray-700">{(item as any).responsible_editor.full_name || (item as any).responsible_editor.email}</span>
                                 ) : (
-                                  <span className="text-muted-foreground text-sm">-</span>
+                                  <span className="text-gray-400 text-sm">-</span>
                                 )}
                               </td>
                               <td className="p-4">
@@ -692,8 +693,8 @@ export default function Lineup() {
                       </tbody>
                     </table>
                   )}
-                </NeonCardContent>
-              </NeonCard>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="flatplan" className="mt-4">
