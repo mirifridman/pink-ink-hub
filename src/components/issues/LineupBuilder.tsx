@@ -15,7 +15,7 @@ import {
   useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
   useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
   useLineupItems, useInserts, useEditors, useIssueEditors, useAddIssueEditor, 
-  useRemoveIssueEditor 
+  useRemoveIssueEditor, useSwapLineupPages 
 } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -94,6 +94,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const deleteInsert = useDeleteInsert();
   const addIssueEditor = useAddIssueEditor();
   const removeIssueEditor = useRemoveIssueEditor();
+  const swapLineupPages = useSwapLineupPages();
   
   // Editors data
   const { data: allEditors = [] } = useEditors();
@@ -300,13 +301,42 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     setShowSwapModal(true);
   };
 
-  const executeSwap = () => {
+  const executeSwap = async () => {
     if (swapSourceRow && swapTargetId) {
-      swapRowPages(swapSourceRow.id, swapTargetId);
-      setShowSwapModal(false);
-      setSwapSourceRow(null);
-      setSwapTargetId("");
-      toast.success("העמודים הוחלפו בהצלחה");
+      const targetRow = lineupRows.find(r => r.id === swapTargetId);
+      if (!targetRow) return;
+
+      // For existing issues, persist to database immediately
+      if (existingIssueId && !swapSourceRow.id.startsWith('new-') && !swapTargetId.startsWith('new-')) {
+        try {
+          const sourcePages = [...swapSourceRow.pages].sort((a, b) => a - b);
+          const targetPages = [...targetRow.pages].sort((a, b) => a - b);
+          
+          await swapLineupPages.mutateAsync({
+            item1Id: swapSourceRow.id,
+            item2Id: swapTargetId,
+            item1Pages: { page_start: sourcePages[0], page_end: sourcePages[sourcePages.length - 1] },
+            item2Pages: { page_start: targetPages[0], page_end: targetPages[targetPages.length - 1] },
+            issueId: existingIssueId,
+          });
+          
+          // Update local state to reflect the swap
+          swapRowPages(swapSourceRow.id, swapTargetId);
+          setShowSwapModal(false);
+          setSwapSourceRow(null);
+          setSwapTargetId("");
+        } catch (error) {
+          console.error("Error swapping pages:", error);
+          toast.error("שגיאה בהחלפת עמודים");
+        }
+      } else {
+        // For new issues or new rows, just update local state
+        swapRowPages(swapSourceRow.id, swapTargetId);
+        setShowSwapModal(false);
+        setSwapSourceRow(null);
+        setSwapTargetId("");
+        toast.success("העמודים הוחלפו בהצלחה");
+      }
     }
   };
 
