@@ -130,43 +130,43 @@ export function GridMenu() {
   return (
     <>
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-sidebar/95 backdrop-blur-xl flex items-center justify-between px-5 z-50 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-neon flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
+      <header className="fixed top-0 left-0 right-0 h-14 md:h-16 bg-sidebar/95 backdrop-blur-xl flex items-center justify-between px-3 md:px-5 z-50 border-b border-sidebar-border">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl gradient-neon flex items-center justify-center">
+            <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
           </div>
           <div>
-            <div className="text-lg font-rubik font-bold text-white">מגזין פרו</div>
-            <div className="text-xs text-sidebar-foreground/60">ניהול הפקה</div>
+            <div className="text-base md:text-lg font-rubik font-bold text-white">מגזין פרו</div>
+            <div className="text-[10px] md:text-xs text-sidebar-foreground/60">ניהול הפקה</div>
           </div>
         </div>
         
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-11 h-11 bg-sidebar-accent hover:bg-sidebar-primary/20 rounded-xl flex items-center justify-center transition-all duration-300"
+          className="w-10 h-10 md:w-11 md:h-11 bg-sidebar-accent hover:bg-sidebar-primary/20 rounded-lg md:rounded-xl flex items-center justify-center transition-all duration-300"
           aria-label={isOpen ? "סגור תפריט" : "פתח תפריט"}
         >
           {isOpen ? (
-            <X className="text-white" size={24} />
+            <X className="text-white" size={22} />
           ) : (
-            <Menu className="text-white" size={24} />
+            <Menu className="text-white" size={22} />
           )}
         </button>
       </header>
 
       {/* Menu Overlay */}
       <div
-        className={`fixed top-16 left-0 right-0 bottom-0 bg-sidebar/98 backdrop-blur-3xl z-40 transition-all duration-300 overflow-y-auto ${
+        className={`fixed top-14 md:top-16 left-0 right-0 bottom-0 bg-sidebar/98 backdrop-blur-3xl z-40 transition-all duration-300 overflow-y-auto ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
         }`}
       >
         <div
-          className={`max-w-xl mx-auto p-6 transition-all duration-400 ${
+          className={`max-w-md md:max-w-xl mx-auto p-4 md:p-6 transition-all duration-400 ${
             isOpen ? "translate-y-0 opacity-100" : "-translate-y-8 opacity-0"
           }`}
         >
           {/* Grid */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2.5 md:gap-4">
             {filteredMenuItems.map((item, index) => {
               const Icon = item.icon;
               const badgeCount = getBadgeCount(item.badgeKey);
@@ -176,7 +176,7 @@ export function GridMenu() {
                 <button
                   key={item.id}
                   onClick={() => handleNavigate(item.path)}
-                  className={`aspect-square rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-300 relative overflow-hidden group
+                  className={`aspect-square rounded-xl md:rounded-2xl flex flex-col items-center justify-center gap-1.5 md:gap-3 cursor-pointer transition-all duration-300 relative overflow-hidden group p-2
                     ${isActive 
                       ? "bg-gradient-to-br from-sidebar-primary to-purple-600 border-transparent shadow-lg shadow-sidebar-primary/30" 
                       : "bg-sidebar-accent border border-sidebar-border hover:border-sidebar-primary/50 hover:scale-105 hover:shadow-[0_10px_40px_rgba(236,72,153,0.2)]"
@@ -194,17 +194,17 @@ export function GridMenu() {
                   
                   {/* Badge */}
                   {badgeCount > 0 && (
-                    <span className="absolute top-3 left-3 min-w-[22px] h-[22px] bg-destructive rounded-full text-xs font-semibold flex items-center justify-center px-1.5 text-white">
+                    <span className="absolute top-1.5 left-1.5 md:top-3 md:left-3 min-w-[18px] md:min-w-[22px] h-[18px] md:h-[22px] bg-destructive rounded-full text-[10px] md:text-xs font-semibold flex items-center justify-center px-1 md:px-1.5 text-white">
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                   
-                  <Icon className="w-7 h-7 text-white relative z-10" />
-                  <span className="text-sm font-medium text-white text-center relative z-10 px-2">{item.label}</span>
+                  <Icon className="w-5 h-5 md:w-7 md:h-7 text-white relative z-10" />
+                  <span className="text-[11px] md:text-sm font-medium text-white text-center relative z-10 leading-tight">{item.label}</span>
                   
                   {/* Active indicator */}
                   {isActive && (
-                    <div className="absolute bottom-3 w-6 h-1 rounded-full bg-white/50" />
+                    <div className="absolute bottom-2 md:bottom-3 w-5 md:w-6 h-0.5 md:h-1 rounded-full bg-white/50" />
                   )}
                 </button>
               );
@@ -212,25 +212,25 @@ export function GridMenu() {
           </div>
 
           {/* User Section */}
-          <div className="mt-8 pt-5 border-t border-sidebar-border flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className={`h-11 w-11 bg-gradient-to-br ${role ? roleColors[role] : "from-pink-500 to-purple-500"}`}>
-                <AvatarFallback className="bg-transparent text-white font-bold text-lg">
+          <div className="mt-6 md:mt-8 pt-4 md:pt-5 border-t border-sidebar-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Avatar className={`h-9 w-9 md:h-11 md:w-11 bg-gradient-to-br ${role ? roleColors[role] : "from-pink-500 to-purple-500"}`}>
+                <AvatarFallback className="bg-transparent text-white font-bold text-sm md:text-lg">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium text-white">{getUserDisplayName()}</div>
-                <div className="text-xs text-sidebar-foreground/60">
+                <div className="font-medium text-white text-sm md:text-base truncate max-w-[150px] md:max-w-none">{getUserDisplayName()}</div>
+                <div className="text-[10px] md:text-xs text-sidebar-foreground/60">
                   {role ? roleLabels[role] : "משתמש"}
                 </div>
               </div>
             </div>
             <button 
               onClick={handleSignOut}
-              className="px-5 py-2.5 bg-sidebar-accent hover:bg-destructive/20 hover:text-destructive rounded-xl text-white text-sm transition-all duration-300 flex items-center gap-2"
+              className="w-full sm:w-auto px-4 md:px-5 py-2 md:py-2.5 bg-sidebar-accent hover:bg-destructive/20 hover:text-destructive rounded-lg md:rounded-xl text-white text-sm transition-all duration-300 flex items-center justify-center gap-2"
             >
-              <LogOut size={16} />
+              <LogOut size={14} className="md:w-4 md:h-4" />
               התנתקות
             </button>
           </div>
