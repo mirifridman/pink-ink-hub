@@ -54,8 +54,8 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
       });
     }
 
-    // Split spreads into pages (12 spreads per A4 page for compact layout)
-    const SPREADS_PER_PAGE = 12;
+    // Split spreads into pages (3 columns x 8 rows = 24 spreads per A4 page)
+    const SPREADS_PER_PAGE = 24;
     const pages: typeof spreads[] = [];
     for (let i = 0; i < spreads.length; i += SPREADS_PER_PAGE) {
       pages.push(spreads.slice(i, i + SPREADS_PER_PAGE));
@@ -190,8 +190,8 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
               </div>
             )}
 
-            {/* Spreads Grid - 6 columns, compact */}
-            <div className="grid grid-cols-6 gap-1">
+            {/* Spreads Grid - 3 columns x 8 rows */}
+            <div className="grid grid-cols-3 gap-2">
               {pageSpreads.map((spread, idx) => (
                 <div 
                   key={idx} 
