@@ -708,8 +708,6 @@ export default function Lineup() {
                         is_designed: item.is_designed,
                       }))}
                       templatePages={selectedIssue.template_pages}
-                      issueId={selectedIssue.id}
-                      onUpdate={() => refetchLineup()}
                     />
                   )}
                 </NeonCardContent>
