@@ -359,15 +359,49 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     }
   };
 
-  const moveRowUp = (index: number) => {
+  const moveRowUp = async (index: number) => {
     if (index > 0) {
-      moveRow(index, index - 1);
+      const currentRow = lineupRows[index];
+      const targetRow = lineupRows[index - 1];
+      // Swap pages between the two items
+      await performPageSwap(currentRow, targetRow);
     }
   };
 
-  const moveRowDown = (index: number) => {
+  const moveRowDown = async (index: number) => {
     if (index < lineupRows.length - 1) {
-      moveRow(index, index + 1);
+      const currentRow = lineupRows[index];
+      const targetRow = lineupRows[index + 1];
+      // Swap pages between the two items
+      await performPageSwap(currentRow, targetRow);
+    }
+  };
+
+  const performPageSwap = async (row1: LineupRow, row2: LineupRow) => {
+    // For existing issues with existing rows, persist to database
+    if (existingIssueId && !row1.id.startsWith('new-') && !row2.id.startsWith('new-')) {
+      try {
+        const row1Pages = [...row1.pages].sort((a, b) => a - b);
+        const row2Pages = [...row2.pages].sort((a, b) => a - b);
+        
+        await swapLineupPages.mutateAsync({
+          item1Id: row1.id,
+          item2Id: row2.id,
+          item1Pages: { page_start: row1Pages[0], page_end: row1Pages[row1Pages.length - 1] },
+          item2Pages: { page_start: row2Pages[0], page_end: row2Pages[row2Pages.length - 1] },
+          issueId: existingIssueId,
+        });
+        
+        // Update local state to reflect the swap
+        swapRowPages(row1.id, row2.id);
+      } catch (error) {
+        console.error("Error swapping pages:", error);
+        toast.error("שגיאה בהחלפת עמודים");
+      }
+    } else {
+      // For new issues or new rows, just update local state
+      swapRowPages(row1.id, row2.id);
+      toast.success("העמודים הוחלפו בהצלחה");
     }
   };
 
