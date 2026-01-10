@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { UrgentItemsCard } from "@/components/dashboard/UrgentItemsCard";
 import { PendingTasksCard } from "@/components/dashboard/PendingTasksCard";
@@ -16,8 +17,41 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const getTimeBasedGreeting = (): string => {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+  
+  // שבוע טוב: Saturday from 17:00 until Sunday at 12:00
+  if ((day === 6 && hour >= 17) || (day === 0 && hour < 12)) {
+    return "שבוע טוב";
+  }
+  
+  // Time-based greetings
+  if (hour >= 5 && hour < 11) {
+    return "בוקר טוב";
+  } else if (hour >= 11 && hour < 14) {
+    return "צהריים טובים";
+  } else if (hour >= 14 && hour < 17) {
+    return "אחה״צ טובים";
+  } else if (hour >= 17 && hour < 21) {
+    return "ערב טוב";
+  } else {
+    return "לילה טוב";
+  }
+};
+
 export default function Dashboard() {
   const { user } = useAuth();
+  const [greeting, setGreeting] = useState(getTimeBasedGreeting());
+
+  // Update greeting every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGreeting(getTimeBasedGreeting());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const { data: activeIssues, isLoading: issuesLoading } = useActiveIssues();
   const { data: pendingTasks, isLoading: tasksLoading } = usePendingTasks();
@@ -81,7 +115,7 @@ export default function Dashboard() {
       <div className="space-y-8 animate-fade-in-up">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-rubik font-bold text-foreground">שלום {firstName}! 👋</h1>
+          <h1 className="text-3xl font-rubik font-bold text-foreground">{greeting} {firstName}! 👋</h1>
           <p className="text-muted-foreground mt-1">הנה סיכום מהיר של מה שקורה היום</p>
         </div>
 
