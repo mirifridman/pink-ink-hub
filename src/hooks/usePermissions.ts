@@ -19,6 +19,7 @@ export type PermissionKey =
   | "manage_team"
   | "view_reminders"
   | "manage_reminders"
+  | "send_team_reminders"
   | "view_schedule"
   | "view_messages"
   | "send_messages"
@@ -51,6 +52,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   manage_team: "ניהול צוות",
   view_reminders: "צפייה בתזכורות",
   manage_reminders: "ניהול תזכורות",
+  send_team_reminders: "שליחת תזכורות למשתמשים אחרים",
   view_schedule: "צפייה בלוח רבעוני",
   view_messages: "צפייה בהודעות",
   send_messages: "שליחת הודעות",
@@ -87,7 +89,7 @@ export const PERMISSION_GROUPS: { name: string; permissions: PermissionKey[] }[]
   },
   {
     name: "תזכורות",
-    permissions: ["view_reminders", "manage_reminders"],
+    permissions: ["view_reminders", "manage_reminders", "send_team_reminders"],
   },
   {
     name: "לוח רבעוני",

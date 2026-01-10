@@ -1,20 +1,15 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { UrgentItemsCard } from "@/components/dashboard/UrgentItemsCard";
-import { PendingTasksCard } from "@/components/dashboard/PendingTasksCard";
+import { SystemNotificationsCard } from "@/components/dashboard/SystemNotificationsCard";
 import { ActiveIssuesCard } from "@/components/dashboard/ActiveIssuesCard";
-import { RemindersCard } from "@/components/dashboard/RemindersCard";
+import { TeamRemindersCard } from "@/components/dashboard/TeamRemindersCard";
 import { TimeWidget } from "@/components/dashboard/TimeWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   useActiveIssues, 
-  usePendingTasks, 
-  usePendingReminders, 
   useUrgentItemsCounts 
 } from "@/hooks/useDashboard";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sun, Sunrise, Cloud, Sunset, Moon, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -62,58 +57,7 @@ export default function Dashboard() {
   }, []);
 
   const { data: activeIssues, isLoading: issuesLoading } = useActiveIssues();
-  const { data: pendingTasks, isLoading: tasksLoading } = usePendingTasks();
-  const { data: pendingReminders, isLoading: remindersLoading } = usePendingReminders();
   const { data: urgentCounts, isLoading: countsLoading } = useUrgentItemsCounts();
-
-  const queryClient = useQueryClient();
-
-  const approveReminder = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("reminders")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("התזכורת נשלחה בהצלחה");
-      queryClient.invalidateQueries({ queryKey: ["dashboard-pending-reminders"] });
-    },
-    onError: () => {
-      toast.error("שגיאה בשליחת התזכורת");
-    },
-  });
-
-  const dismissReminder = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("reminders")
-        .update({ status: "dismissed" })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("התזכורת בוטלה");
-      queryClient.invalidateQueries({ queryKey: ["dashboard-pending-reminders"] });
-    },
-    onError: () => {
-      toast.error("שגיאה בביטול התזכורת");
-    },
-  });
-
-  const handleApproveReminder = (id: string) => {
-    const reminder = pendingReminders?.find(r => r.id === id);
-    if (reminder && !reminder.hasContactInfo) {
-      toast.error("לא ניתן לשלוח הקצאה, חסרים פרטי קשר");
-      return;
-    }
-    approveReminder.mutate(id);
-  };
-
-  const handleDismissReminder = (id: string) => {
-    dismissReminder.mutate(id);
-  };
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "משתמש";
 
@@ -163,25 +107,13 @@ export default function Dashboard() {
           )}
 
           {/* Row 2 */}
-          {tasksLoading ? (
-            <Skeleton className="h-64 lg:col-span-6" />
-          ) : (
-            <div className="lg:col-span-6">
-              <PendingTasksCard tasks={pendingTasks || []} />
-            </div>
-          )}
+          <div className="lg:col-span-6">
+            <SystemNotificationsCard />
+          </div>
           
-          {remindersLoading ? (
-            <Skeleton className="h-64 lg:col-span-6" />
-          ) : (
-            <div className="lg:col-span-6">
-              <RemindersCard
-                reminders={pendingReminders || []}
-                onApprove={handleApproveReminder}
-                onDismiss={handleDismissReminder}
-              />
-            </div>
-          )}
+          <div className="lg:col-span-6">
+            <TeamRemindersCard />
+          </div>
         </div>
       </div>
     </AppLayout>
