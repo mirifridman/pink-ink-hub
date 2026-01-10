@@ -136,13 +136,17 @@ export function EditableStatusCell({
     );
   }
 
-  // Regular checkbox for other states
+  // Regular checkbox for other states - with visible border for light theme
   return (
     <Checkbox
       checked={isChecked}
       onCheckedChange={handleToggle}
       disabled={!canEdit || isUpdating}
-      className="w-5 h-5"
+      className={cn(
+        "w-5 h-5",
+        !isChecked && "border-2 border-gray-400 data-[state=unchecked]:bg-white",
+        isChecked && "bg-emerald-500 border-emerald-500 text-white"
+      )}
     />
   );
 }
