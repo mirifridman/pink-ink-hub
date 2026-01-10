@@ -367,16 +367,20 @@ export function useSwapLineupPages() {
       item2Pages: { page_start: number; page_end: number };
       issueId: string;
     }) => {
-      // To avoid the check_page_overlap trigger blocking the swap,
-      // we first move item1 to temporary negative pages, then move item2 to item1's pages,
-      // then move item1 to item2's original pages
+      // To avoid CHECK constraint violations, we move item1 to high temporary pages (9000+),
+      // then move item2 to item1's pages, then move item1 to item2's original pages
       
-      // Step 1: Move item1 to temporary negative pages to avoid overlap check
+      // Calculate temp pages that are definitely not in use
+      const tempPageStart = 9000;
+      const pageSpan1 = item1Pages.page_end - item1Pages.page_start;
+      const tempPageEnd = tempPageStart + pageSpan1;
+      
+      // Step 1: Move item1 to temporary high pages to avoid overlap
       const { error: error1 } = await supabase
         .from("lineup_items")
         .update({ 
-          page_start: -999,
-          page_end: -999,
+          page_start: tempPageStart,
+          page_end: tempPageEnd,
         })
         .eq("id", item1Id);
       if (error1) throw error1;
