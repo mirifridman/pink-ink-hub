@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -14,7 +14,8 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  ChevronUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyPermissions, type PermissionKey } from "@/hooks/usePermissions";
@@ -70,6 +71,32 @@ export function GridMenu() {
   const { data: permissions, isLoading: permissionsLoading } = useMyPermissions();
   const { data: pendingRemindersCount } = usePendingRemindersCount();
   const { data: unreadNotificationsCount } = useUnreadNotificationsCount();
+
+  // Swipe detection
+  const touchStartY = useRef<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current === null || touchStartX.current === null) return;
+    
+    const touchEndY = e.changedTouches[0].clientY;
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaY = touchStartY.current - touchEndY;
+    const deltaX = Math.abs(touchStartX.current - touchEndX);
+    
+    // Swipe up to close (deltaY > 80px and more vertical than horizontal)
+    if (deltaY > 80 && deltaY > deltaX) {
+      setIsOpen(false);
+    }
+    
+    touchStartY.current = null;
+    touchStartX.current = null;
+  };
 
   // Close menu on escape key
   useEffect(() => {
@@ -159,9 +186,19 @@ export function GridMenu() {
         className={`fixed top-14 md:top-16 left-0 right-0 bottom-0 bg-sidebar/98 backdrop-blur-3xl z-40 transition-all duration-300 overflow-y-auto ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
         }`}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Swipe indicator */}
+        <div className="flex justify-center pt-2 pb-1 md:hidden">
+          <div className="flex flex-col items-center gap-0.5 text-sidebar-foreground/40">
+            <ChevronUp className="w-4 h-4 animate-bounce" />
+            <span className="text-[10px]">החלק למעלה לסגירה</span>
+          </div>
+        </div>
+        
         <div
-          className={`max-w-md md:max-w-xl mx-auto p-4 md:p-6 transition-all duration-400 ${
+          className={`max-w-md md:max-w-xl mx-auto p-4 md:p-6 pt-2 md:pt-6 transition-all duration-400 ${
             isOpen ? "translate-y-0 opacity-100" : "-translate-y-8 opacity-0"
           }`}
         >
