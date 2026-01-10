@@ -16,28 +16,36 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sun, Sunrise, Cloud, Sunset, Moon, Star, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const getTimeBasedGreeting = (): string => {
+interface GreetingData {
+  text: string;
+  Icon: LucideIcon;
+  iconColor: string;
+}
+
+const getTimeBasedGreeting = (): GreetingData => {
   const now = new Date();
   const hour = now.getHours();
   const day = now.getDay(); // 0 = Sunday, 6 = Saturday
   
   // שבוע טוב: Saturday from 17:00 until Sunday at 12:00
   if ((day === 6 && hour >= 17) || (day === 0 && hour < 12)) {
-    return "שבוע טוב";
+    return { text: "שבוע טוב", Icon: Sparkles, iconColor: "text-purple-400" };
   }
   
   // Time-based greetings
   if (hour >= 5 && hour < 11) {
-    return "בוקר טוב";
+    return { text: "בוקר טוב", Icon: Sunrise, iconColor: "text-orange-400" };
   } else if (hour >= 11 && hour < 14) {
-    return "צהריים טובים";
+    return { text: "צהריים טובים", Icon: Sun, iconColor: "text-yellow-400" };
   } else if (hour >= 14 && hour < 17) {
-    return "אחה״צ טובים";
+    return { text: "אחה״צ טובים", Icon: Cloud, iconColor: "text-sky-400" };
   } else if (hour >= 17 && hour < 21) {
-    return "ערב טוב";
+    return { text: "ערב טוב", Icon: Sunset, iconColor: "text-orange-500" };
   } else {
-    return "לילה טוב";
+    return { text: "לילה טוב", Icon: Moon, iconColor: "text-indigo-400" };
   }
 };
 
@@ -115,7 +123,10 @@ export default function Dashboard() {
       <div className="space-y-8 animate-fade-in-up">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-rubik font-bold text-foreground">{greeting} {firstName}! 👋</h1>
+          <h1 className="text-3xl font-rubik font-bold text-foreground flex items-center gap-2">
+            <greeting.Icon className={`w-8 h-8 ${greeting.iconColor}`} />
+            {greeting.text} {firstName}!
+          </h1>
           <p className="text-muted-foreground mt-1">הנה סיכום מהיר של מה שקורה היום</p>
         </div>
 
