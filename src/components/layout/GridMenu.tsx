@@ -156,8 +156,8 @@ export function GridMenu() {
 
   return (
     <>
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 md:h-16 bg-sidebar/95 backdrop-blur-xl flex items-center justify-between px-3 md:px-5 z-50 border-b border-sidebar-border">
+      {/* Mobile Header - hidden on desktop */}
+      <header className="fixed top-0 left-0 right-0 h-14 md:h-16 bg-sidebar/95 backdrop-blur-xl flex items-center justify-between px-3 md:px-5 z-50 border-b border-sidebar-border lg:hidden">
         <div className="flex items-center gap-2 md:gap-3">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl gradient-neon flex items-center justify-center">
             <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
@@ -181,9 +181,9 @@ export function GridMenu() {
         </button>
       </header>
 
-      {/* Menu Overlay */}
+      {/* Menu Overlay - mobile only */}
       <div
-        className={`fixed top-14 md:top-16 left-0 right-0 bottom-0 bg-sidebar/98 backdrop-blur-3xl z-40 transition-all duration-300 overflow-y-auto ${
+        className={`fixed top-14 md:top-16 left-0 right-0 bottom-0 bg-sidebar/98 backdrop-blur-3xl z-40 transition-all duration-300 overflow-y-auto lg:hidden ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
         }`}
         onTouchStart={handleTouchStart}
