@@ -293,14 +293,58 @@ export function useLineupItems(issueId: string | undefined) {
         .select(`
           *,
           supplier:suppliers(*),
-          responsible_editor:profiles!lineup_items_responsible_editor_id_fkey(id, full_name, email)
+          responsible_editor:profiles!lineup_items_responsible_editor_id_fkey(id, full_name, email),
+          lineup_item_suppliers(supplier_id, suppliers(*))
         `)
         .eq("issue_id", issueId)
         .order("page_start");
       if (error) throw error;
-      return data as (LineupItem & { supplier: Supplier | null; responsible_editor: { id: string; full_name: string | null; email: string | null } | null })[];
+      return data as (LineupItem & { 
+        supplier: Supplier | null; 
+        responsible_editor: { id: string; full_name: string | null; email: string | null } | null;
+        lineup_item_suppliers: Array<{ supplier_id: string; suppliers: Supplier }>;
+      })[];
     },
     enabled: !!issueId,
+  });
+}
+
+// Lineup Item Suppliers (junction table for multiple suppliers per item)
+export function useUpdateLineupItemSuppliers() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ lineupItemId, supplierIds, issueId }: { lineupItemId: string; supplierIds: string[]; issueId: string }) => {
+      // First, delete all existing suppliers for this lineup item
+      const { error: deleteError } = await supabase
+        .from("lineup_item_suppliers")
+        .delete()
+        .eq("lineup_item_id", lineupItemId);
+      
+      if (deleteError) throw deleteError;
+      
+      // Then, insert new suppliers
+      if (supplierIds.length > 0) {
+        const insertData = supplierIds.map(supplierId => ({
+          lineup_item_id: lineupItemId,
+          supplier_id: supplierId,
+        }));
+        
+        const { error: insertError } = await supabase
+          .from("lineup_item_suppliers")
+          .insert(insertData);
+        
+        if (insertError) throw insertError;
+      }
+      
+      return { lineupItemId, issueId };
+    },
+    onSuccess: ({ issueId }) => {
+      queryClient.invalidateQueries({ queryKey: ["lineupItems", issueId] });
+    },
+    onError: (error) => {
+      toast.error("שגיאה בעדכון ספקים: " + error.message);
+    },
   });
 }
 

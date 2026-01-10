@@ -567,14 +567,25 @@ export default function Lineup() {
                                 )}
                               </td>
                               <td className="p-4">
-                                {item.supplier ? (
-                                  <div className="flex items-center gap-2">
-                                    <User className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm">{item.supplier.name}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground text-sm">-</span>
-                                )}
+                                {(() => {
+                                  const suppliers = (item as any).lineup_item_suppliers?.length > 0
+                                    ? (item as any).lineup_item_suppliers.map((lis: any) => lis.suppliers)
+                                    : item.supplier ? [item.supplier] : [];
+                                  
+                                  if (suppliers.length > 0) {
+                                    return (
+                                      <div className="flex flex-col gap-1">
+                                        {suppliers.map((supplier: any, idx: number) => (
+                                          <div key={idx} className="flex items-center gap-2">
+                                            <User className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm">{supplier?.name || '-'}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  }
+                                  return <span className="text-muted-foreground text-sm">-</span>;
+                                })()}
                               </td>
                               <td className="p-4">
                                 {(item as any).responsible_editor ? (

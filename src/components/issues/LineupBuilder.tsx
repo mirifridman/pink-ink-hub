@@ -15,7 +15,7 @@ import {
   useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
   useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
   useLineupItems, useInserts, useEditors, useIssueEditors, useAddIssueEditor, 
-  useRemoveIssueEditor, useSwapLineupPages, useBatchUpdateLineupPages
+  useRemoveIssueEditor, useSwapLineupPages, useBatchUpdateLineupPages, useUpdateLineupItemSuppliers
 } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -98,6 +98,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const removeIssueEditor = useRemoveIssueEditor();
   const swapLineupPages = useSwapLineupPages();
   const batchUpdateLineupPages = useBatchUpdateLineupPages();
+  const updateLineupItemSuppliers = useUpdateLineupItemSuppliers();
   
   // Editors data
   const { data: allEditors = [] } = useEditors();
@@ -133,6 +134,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     if (existingIssueId && existingLineupItems && !initialLoadDone) {
       const rows = existingLineupItems.map((item) => {
         const pages = Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i);
+        // Get supplier IDs from junction table if available, fallback to legacy supplier_id
+        const supplierIds = (item as any).lineup_item_suppliers?.length > 0
+          ? (item as any).lineup_item_suppliers.map((lis: any) => lis.supplier_id)
+          : item.supplier_id ? [item.supplier_id] : [];
         return {
           id: item.id,
           pages,
@@ -140,7 +145,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           wasDesigned: (item as any).design_status === 'designed' || item.is_designed,
           contentType: (item as any).content_type || "",
           content: item.content,
-          supplierIds: item.supplier_id ? [item.supplier_id] : [],
+          supplierIds,
           source: item.source || "",
           notes: item.notes || "",
           responsibleEditorId: (item as any).responsible_editor_id || undefined,
@@ -170,16 +175,22 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   // Load from source issue if copying lineup (for new issues)
   useEffect(() => {
     if (!existingIssueId && issueData.copy_lineup_from && sourceLineupItems) {
-      const copiedRows = sourceLineupItems.map((item, idx) => ({
-        id: `copied-${idx}`,
-        pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
-        contentType: (item as any).content_type || "",
-        content: item.content,
-        supplierIds: item.supplier_id ? [item.supplier_id] : [],
-        source: item.source || "",
-        notes: item.notes || "",
-        responsibleEditorId: undefined,
-      }));
+      const copiedRows = sourceLineupItems.map((item, idx) => {
+        // Get supplier IDs from junction table if available, fallback to legacy supplier_id
+        const supplierIds = (item as any).lineup_item_suppliers?.length > 0
+          ? (item as any).lineup_item_suppliers.map((lis: any) => lis.supplier_id)
+          : item.supplier_id ? [item.supplier_id] : [];
+        return {
+          id: `copied-${idx}`,
+          pages: Array.from({ length: item.page_end - item.page_start + 1 }, (_, i) => item.page_start + i),
+          contentType: (item as any).content_type || "",
+          content: item.content,
+          supplierIds,
+          source: item.source || "",
+          notes: item.notes || "",
+          responsibleEditorId: undefined,
+        };
+      });
       setLineupRows(copiedRows);
     }
   }, [existingIssueId, sourceLineupItems, issueData.copy_lineup_from]);
@@ -458,7 +469,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           for (const row of recalculatedRows) {
             if (row.pages.length > 0 && row.content && !existingRowIds.includes(row.id)) {
               const sortedPages = [...row.pages].sort((a, b) => a - b);
-              await createLineupItem.mutateAsync({
+              const createdItem = await createLineupItem.mutateAsync({
                 issue_id: existingIssueId,
                 page_start: sortedPages[0],
                 page_end: sortedPages[sortedPages.length - 1],
@@ -473,6 +484,15 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 designer_notes: null,
                 responsible_editor_id: row.responsibleEditorId || null,
               } as any);
+              
+              // Add suppliers to junction table for new item
+              if (row.supplierIds.length > 0) {
+                await updateLineupItemSuppliers.mutateAsync({
+                  lineupItemId: createdItem.id,
+                  supplierIds: row.supplierIds,
+                  issueId: existingIssueId,
+                });
+              }
             }
           }
         } else {
@@ -532,8 +552,15 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 }
                 
                 await updateLineupItem.mutateAsync(updateData);
+                
+                // Update suppliers in junction table
+                await updateLineupItemSuppliers.mutateAsync({
+                  lineupItemId: row.id,
+                  supplierIds: row.supplierIds,
+                  issueId: existingIssueId,
+                });
               } else {
-                await createLineupItem.mutateAsync({
+                const createdItem = await createLineupItem.mutateAsync({
                   issue_id: existingIssueId,
                   page_start: sortedPages[0],
                   page_end: sortedPages[sortedPages.length - 1],
@@ -548,6 +575,15 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                   designer_notes: null,
                   responsible_editor_id: row.responsibleEditorId || null,
                 } as any);
+                
+                // Add suppliers to junction table for new item
+                if (row.supplierIds.length > 0) {
+                  await updateLineupItemSuppliers.mutateAsync({
+                    lineupItemId: createdItem.id,
+                    supplierIds: row.supplierIds,
+                    issueId: existingIssueId,
+                  });
+                }
               }
             }
           }
@@ -624,7 +660,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         for (const row of lineupRows) {
           if (row.pages.length > 0 && row.content) {
             const sortedPages = [...row.pages].sort((a, b) => a - b);
-            await createLineupItem.mutateAsync({
+            const createdItem = await createLineupItem.mutateAsync({
               issue_id: issue.id,
               page_start: sortedPages[0],
               page_end: sortedPages[sortedPages.length - 1],
@@ -639,6 +675,15 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               designer_notes: null,
               responsible_editor_id: row.responsibleEditorId || null,
             } as any);
+            
+            // Add suppliers to junction table for new item
+            if (row.supplierIds.length > 0) {
+              await updateLineupItemSuppliers.mutateAsync({
+                lineupItemId: createdItem.id,
+                supplierIds: row.supplierIds,
+                issueId: issue.id,
+              });
+            }
           }
         }
 
