@@ -1,7 +1,5 @@
 import { useState, useRef } from "react";
-import { NeonCard, NeonCardContent } from "@/components/ui/NeonCard";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -9,14 +7,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Download, FileText, Loader2, CalendarIcon } from "lucide-react";
 import { useIssues, useSuppliers } from "@/hooks/useIssues";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 import { toast } from "sonner";
 import html2pdf from "html2pdf.js";
+import { cn } from "@/lib/utils";
 
 interface SupplierAssignment {
   supplier_id: string;
@@ -30,6 +31,10 @@ interface SupplierAssignment {
   page_start: number;
   page_end: number;
   type: 'lineup' | 'insert';
+  lineup_item_id?: string;
+  insert_id?: string;
+  created_at: string;
+  amount: number;
 }
 
 type ReportType = "detailed" | "summary";
@@ -37,15 +42,16 @@ type ReportType = "detailed" | "summary";
 export function SupplierAssignmentsReport() {
   const [selectedIssueId, setSelectedIssueId] = useState<string>("all");
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("all");
-  const [reportType, setReportType] = useState<ReportType>("detailed");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const reportRef = useRef<HTMLDivElement>(null);
   
   const { data: issues } = useIssues();
   const { data: suppliers } = useSuppliers();
 
-  // Fetch all lineup items with supplier info
+  // Fetch all lineup items with supplier info and budget
   const { data: assignments, isLoading } = useQuery({
-    queryKey: ['supplier-assignments'],
+    queryKey: ['supplier-assignments-with-budget'],
     queryFn: async () => {
       // Fetch lineup items
       const { data: lineupItems, error: lineupError } = await supabase
@@ -57,6 +63,7 @@ export function SupplierAssignmentsReport() {
           page_end,
           supplier_id,
           issue_id,
+          created_at,
           suppliers (id, name, supplier_type),
           issues (id, issue_number, theme, magazine_id, magazines (name))
         `)
@@ -72,12 +79,35 @@ export function SupplierAssignmentsReport() {
           name,
           supplier_id,
           issue_id,
+          created_at,
           suppliers (id, name, supplier_type),
           issues (id, issue_number, theme, magazine_id, magazines (name))
         `)
         .not('supplier_id', 'is', null);
 
       if (insertsError) throw insertsError;
+
+      // Fetch budget items
+      const { data: budgetItems, error: budgetError } = await supabase
+        .from('budget_items')
+        .select('*');
+
+      if (budgetError) throw budgetError;
+
+      // Create maps for budget lookup
+      const lineupBudgetMap = new Map<string, number>();
+      const insertBudgetMap = new Map<string, number>();
+      
+      budgetItems?.forEach((item: any) => {
+        if (item.lineup_item_id) {
+          const current = lineupBudgetMap.get(item.lineup_item_id) || 0;
+          lineupBudgetMap.set(item.lineup_item_id, current + Number(item.amount));
+        }
+        if (item.insert_id) {
+          const current = insertBudgetMap.get(item.insert_id) || 0;
+          insertBudgetMap.set(item.insert_id, current + Number(item.amount));
+        }
+      });
 
       const allAssignments: SupplierAssignment[] = [];
 
@@ -96,6 +126,9 @@ export function SupplierAssignmentsReport() {
             page_start: item.page_start,
             page_end: item.page_end,
             type: 'lineup',
+            lineup_item_id: item.id,
+            created_at: item.created_at,
+            amount: lineupBudgetMap.get(item.id) || 0,
           });
         }
       });
@@ -115,6 +148,9 @@ export function SupplierAssignmentsReport() {
             page_start: 0,
             page_end: 0,
             type: 'insert',
+            insert_id: item.id,
+            created_at: item.created_at,
+            amount: insertBudgetMap.get(item.id) || 0,
           });
         }
       });
@@ -127,7 +163,24 @@ export function SupplierAssignmentsReport() {
   const filteredAssignments = assignments?.filter(a => {
     const matchesIssue = selectedIssueId === "all" || a.issue_id === selectedIssueId;
     const matchesSupplier = selectedSupplierId === "all" || a.supplier_id === selectedSupplierId;
-    return matchesIssue && matchesSupplier;
+    
+    // Date filter
+    let matchesDate = true;
+    if (dateFrom || dateTo) {
+      const itemDate = parseISO(a.created_at);
+      if (dateFrom && dateTo) {
+        matchesDate = isWithinInterval(itemDate, {
+          start: startOfDay(dateFrom),
+          end: endOfDay(dateTo)
+        });
+      } else if (dateFrom) {
+        matchesDate = itemDate >= startOfDay(dateFrom);
+      } else if (dateTo) {
+        matchesDate = itemDate <= endOfDay(dateTo);
+      }
+    }
+    
+    return matchesIssue && matchesSupplier && matchesDate;
   }) || [];
 
   // Group by supplier
@@ -139,36 +192,40 @@ export function SupplierAssignmentsReport() {
         assignments: [],
         totalPages: 0,
         totalInserts: 0,
+        totalAmount: 0,
       };
     }
     acc[assignment.supplier_id].assignments.push(assignment);
+    acc[assignment.supplier_id].totalAmount += assignment.amount;
     if (assignment.type === 'lineup') {
       acc[assignment.supplier_id].totalPages += (assignment.page_end - assignment.page_start + 1);
     } else {
       acc[assignment.supplier_id].totalInserts += 1;
     }
     return acc;
-  }, {} as Record<string, { supplier_name: string; supplier_type: string | null; assignments: SupplierAssignment[]; totalPages: number; totalInserts: number }>);
+  }, {} as Record<string, { supplier_name: string; supplier_type: string | null; assignments: SupplierAssignment[]; totalPages: number; totalInserts: number; totalAmount: number }>);
+
+  const grandTotalAmount = Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalAmount, 0);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(amount);
+  };
 
   const handleExportPdf = async (exportType: ReportType) => {
     if (!reportRef.current) return;
     
     try {
-      // Clone the report element for PDF export
       const clonedReport = reportRef.current.cloneNode(true) as HTMLElement;
       
-      // Apply light theme styles for PDF
       clonedReport.style.backgroundColor = '#ffffff';
       clonedReport.style.color = '#1a1a1a';
       
-      // Apply light theme to all elements
       clonedReport.querySelectorAll('*').forEach((el) => {
         const htmlEl = el as HTMLElement;
         htmlEl.style.backgroundColor = htmlEl.style.backgroundColor?.includes('muted') ? '#f5f5f5' : '';
         htmlEl.style.color = htmlEl.style.color || '#1a1a1a';
       });
 
-      // If summary report, hide detailed tables
       if (exportType === "summary") {
         clonedReport.querySelectorAll('[data-report-detailed]').forEach((el) => {
           (el as HTMLElement).style.display = 'none';
@@ -178,7 +235,6 @@ export function SupplierAssignmentsReport() {
         });
       }
 
-      // Create a temporary container
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
@@ -204,7 +260,6 @@ export function SupplierAssignmentsReport() {
       
       await html2pdf().set(opt).from(clonedReport).save();
       
-      // Cleanup
       document.body.removeChild(tempContainer);
       
       toast.success('הדו״ח יוצא ל-PDF בהצלחה!');
@@ -224,6 +279,11 @@ export function SupplierAssignmentsReport() {
       other: "אחר",
     };
     return types[type || ''] || "אחר";
+  };
+
+  const clearDateFilters = () => {
+    setDateFrom(undefined);
+    setDateTo(undefined);
   };
 
   if (isLoading) {
@@ -272,6 +332,65 @@ export function SupplierAssignmentsReport() {
           </Select>
         </div>
 
+        {/* Date Range Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">מתאריך:</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[140px] justify-start text-right font-normal",
+                  !dateFrom && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="ml-2 h-4 w-4" />
+                {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "בחר תאריך"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dateFrom}
+                onSelect={setDateFrom}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">עד תאריך:</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[140px] justify-start text-right font-normal",
+                  !dateTo && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="ml-2 h-4 w-4" />
+                {dateTo ? format(dateTo, "dd/MM/yyyy") : "בחר תאריך"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dateTo}
+                onSelect={setDateTo}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={clearDateFilters}>
+            נקה תאריכים
+          </Button>
+        )}
+
         <div className="flex items-center gap-2 mr-auto">
           <Button variant="outline" onClick={() => handleExportPdf("detailed")}>
             <Download className="w-4 h-4 ml-2" />
@@ -286,10 +405,20 @@ export function SupplierAssignmentsReport() {
 
       {/* Report Content */}
       <div ref={reportRef} className="bg-white text-gray-900 p-6 rounded-lg">
-        {/* Report Header - always visible in PDF */}
+        {/* Report Header */}
         <div className="mb-6 text-center border-b pb-4">
           <h2 className="text-xl font-bold text-gray-900">דו״ח הקצאות ספקים</h2>
           <p className="text-sm text-gray-600">{format(new Date(), "dd/MM/yyyy", { locale: he })}</p>
+          {(dateFrom || dateTo) && (
+            <p className="text-sm text-gray-500 mt-1">
+              {dateFrom && dateTo 
+                ? `טווח תאריכים: ${format(dateFrom, "dd/MM/yyyy")} - ${format(dateTo, "dd/MM/yyyy")}`
+                : dateFrom 
+                  ? `מתאריך: ${format(dateFrom, "dd/MM/yyyy")}`
+                  : `עד תאריך: ${format(dateTo!, "dd/MM/yyyy")}`
+              }
+            </p>
+          )}
         </div>
 
         {Object.keys(groupedBySupplier).length === 0 ? (
@@ -324,6 +453,9 @@ export function SupplierAssignmentsReport() {
                           {data.totalInserts} שילובים
                         </span>
                       )}
+                      <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-bold">
+                        {formatCurrency(data.totalAmount)}
+                      </span>
                     </div>
                   </div>
 
@@ -336,6 +468,7 @@ export function SupplierAssignmentsReport() {
                         <th className="p-2 text-right font-medium text-gray-700">תוכן</th>
                         <th className="p-2 text-right font-medium text-gray-700">עמודים</th>
                         <th className="p-2 text-right font-medium text-gray-700">סוג</th>
+                        <th className="p-2 text-right font-medium text-gray-700">סכום</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -356,9 +489,18 @@ export function SupplierAssignmentsReport() {
                               {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
                             </span>
                           </td>
+                          <td className="p-2 text-gray-800 font-medium">
+                            {assignment.amount > 0 ? formatCurrency(assignment.amount) : '-'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50 font-bold">
+                        <td colSpan={5} className="p-2 text-right text-gray-700">סה״כ לספק:</td>
+                        <td className="p-2 text-green-700">{formatCurrency(data.totalAmount)}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               ))}
@@ -374,6 +516,7 @@ export function SupplierAssignmentsReport() {
                     <th className="p-3 text-center font-bold text-gray-800">עמודים</th>
                     <th className="p-3 text-center font-bold text-gray-800">שילובים</th>
                     <th className="p-3 text-center font-bold text-gray-800">סה״כ פריטים</th>
+                    <th className="p-3 text-center font-bold text-gray-800">סכום</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -384,6 +527,7 @@ export function SupplierAssignmentsReport() {
                       <td className="p-3 text-center text-gray-800">{data.totalPages}</td>
                       <td className="p-3 text-center text-gray-800">{data.totalInserts}</td>
                       <td className="p-3 text-center font-bold text-gray-900">{data.assignments.length}</td>
+                      <td className="p-3 text-center font-bold text-green-700">{formatCurrency(data.totalAmount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -400,6 +544,7 @@ export function SupplierAssignmentsReport() {
                     <td className="p-3 text-center font-bold text-gray-900">
                       {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.assignments.length, 0)}
                     </td>
+                    <td className="p-3 text-center font-bold text-green-700">{formatCurrency(grandTotalAmount)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -410,8 +555,8 @@ export function SupplierAssignmentsReport() {
         {/* Summary Footer */}
         {Object.keys(groupedBySupplier).length > 0 && (
           <div className="mt-6 p-4 bg-gray-100 rounded-lg border border-gray-200">
-            <h4 className="font-medium mb-2 text-gray-900">סיכום</h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <h4 className="font-medium mb-2 text-gray-900">סיכום כללי</h4>
+            <div className="grid grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">סה״כ ספקים:</span>{" "}
                 <strong className="text-gray-900">{Object.keys(groupedBySupplier).length}</strong>
@@ -423,6 +568,10 @@ export function SupplierAssignmentsReport() {
               <div>
                 <span className="text-gray-600">סה״כ שילובים:</span>{" "}
                 <strong className="text-gray-900">{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalInserts, 0)}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600">סה״כ סכום:</span>{" "}
+                <strong className="text-green-700 text-lg">{formatCurrency(grandTotalAmount)}</strong>
               </div>
             </div>
           </div>
