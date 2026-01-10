@@ -11,11 +11,14 @@ import {
   Settings, 
   Shield,
   LogOut,
-  Sparkles
+  Sparkles,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyPermissions, type PermissionKey } from "@/hooks/usePermissions";
 import { usePendingRemindersCount, useUnreadNotificationsCount } from "@/hooks/useReminders";
+import { useTheme } from "@/hooks/useTheme";
 
 interface MenuItem {
   id: string;
@@ -65,6 +68,11 @@ export function DesktopSidebar() {
   const { data: permissions, isLoading: permissionsLoading } = useMyPermissions();
   const { data: pendingRemindersCount } = usePendingRemindersCount();
   const { data: unreadNotificationsCount } = useUnreadNotificationsCount();
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
 
   const filteredMenuItems = menuItems.filter((item) => {
     if (role === "admin") return true;
@@ -185,6 +193,23 @@ export function DesktopSidebar() {
               {role ? roleLabels[role] : "משתמש"}
             </div>
           </div>
+        </button>
+        
+        {/* Theme toggle button */}
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200"
+        >
+          <span className="min-w-[32px] h-8 flex items-center justify-center">
+            {resolvedTheme === "dark" ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </span>
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium whitespace-nowrap">
+            {resolvedTheme === "dark" ? "מצב בהיר" : "מצב כהה"}
+          </span>
         </button>
         
         {/* Logout button - visible on hover */}
