@@ -11,7 +11,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <GridMenu />
       
       {/* Main Content */}
-      <main className="min-h-screen p-4 md:p-8 pt-20">
+      <main className="min-h-screen p-3 md:p-6 lg:p-8 pt-[70px] md:pt-20">
         {children}
       </main>
     </div>

@@ -247,19 +247,19 @@ export default function Lineup() {
   return (
     <TooltipProvider>
       <AppLayout>
-        <div className="space-y-6 animate-fade-in-up" dir="rtl" ref={lineupContainerRef}>
+        <div className="space-y-4 md:space-y-6 animate-fade-in-up" dir="rtl" ref={lineupContainerRef}>
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-rubik font-bold text-foreground flex items-center gap-3">
-                <TableProperties className="w-8 h-8 text-accent" />
+              <h1 className="text-2xl md:text-3xl font-rubik font-bold text-foreground flex items-center gap-2 md:gap-3">
+                <TableProperties className="w-6 h-6 md:w-8 md:h-8 text-accent" />
                 ליינאפ
               </h1>
-              <p className="text-muted-foreground mt-1">ניהול תוכן הגליון</p>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">ניהול תוכן הגליון</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
               <Select value={effectiveIssueId} onValueChange={setSelectedIssueId}>
-                <SelectTrigger className="w-[280px]">
+                <SelectTrigger className="w-full sm:w-[240px] md:w-[280px]">
                   <SelectValue placeholder="בחר גליון" />
                 </SelectTrigger>
                 <SelectContent>
@@ -289,79 +289,81 @@ export default function Lineup() {
               </Select>
               
               {/* Export/Share Buttons */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 ml-2" />
-                    ייצוא
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleExportImage}>
-                    <FileImage className="w-4 h-4 ml-2" />
-                    ייצוא לתמונה
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportPdf}>
-                    <FileText className="w-4 h-4 ml-2" />
-                    ייצוא ל-PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <Button variant="outline" size="sm" onClick={handleShare}>
-                <Share2 className="w-4 h-4 ml-2" />
-                שתף
-              </Button>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <Download className="w-4 h-4 ml-1 md:ml-2" />
+                      <span className="hidden sm:inline">ייצוא</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportImage}>
+                      <FileImage className="w-4 h-4 ml-2" />
+                      ייצוא לתמונה
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPdf}>
+                      <FileText className="w-4 h-4 ml-2" />
+                      ייצוא ל-PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <Button variant="outline" size="sm" onClick={handleShare} className="flex-1 sm:flex-none">
+                  <Share2 className="w-4 h-4 ml-1 md:ml-2" />
+                  <span className="hidden sm:inline">שתף</span>
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Issue Details Card */}
           {selectedIssue && (
             <NeonCard className="bg-muted/30">
-              <NeonCardContent className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-6">
+              <NeonCardContent className="p-3 md:p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-3 md:gap-6">
                     <div>
-                      <p className="text-xs text-muted-foreground">מגזין</p>
-                      <p className="font-medium">{selectedIssue.magazine?.name}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">מגזין</p>
+                      <p className="font-medium text-sm md:text-base">{selectedIssue.magazine?.name}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">נושא</p>
-                      <p className="font-medium text-primary">{selectedIssue.theme}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">נושא</p>
+                      <p className="font-medium text-sm md:text-base text-primary">{selectedIssue.theme}</p>
                     </div>
                     {/* Hebrew Month Badge - only for Niflaot Kids */}
                     {(selectedIssue as any).hebrew_month && (
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 col-span-2 sm:col-span-1 w-fit">
                         חודש {(selectedIssue as any).hebrew_month}
                       </Badge>
                     )}
-                    <div className="flex items-center gap-2">
-                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Pencil className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">סגירת סקיצה</p>
-                        <p className="font-medium">{format(new Date(selectedIssue.sketch_close_date), "dd/MM/yyyy")}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground">סגירת סקיצה</p>
+                        <p className="font-medium text-sm md:text-base">{format(new Date(selectedIssue.sketch_close_date), "dd/MM/yyyy")}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Printer className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Printer className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">הורדה לדפוס</p>
-                        <p className="font-medium">{format(new Date(selectedIssue.print_date), "dd/MM/yyyy")}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground">הורדה לדפוס</p>
+                        <p className="font-medium text-sm md:text-base">{format(new Date(selectedIssue.print_date), "dd/MM/yyyy")}</p>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4">
                     {/* Progress Bar */}
-                    <div className="min-w-[200px]">
-                      <div className="flex justify-between text-xs mb-1">
+                    <div className="w-full sm:min-w-[160px] md:min-w-[200px]">
+                      <div className="flex justify-between text-[10px] md:text-xs mb-1">
                         <span className="text-muted-foreground">התקדמות</span>
                         <span className="font-medium">{progress}%</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-muted rounded-full h-1.5 md:h-2 overflow-hidden">
                         <div 
                           className={cn(
-                            "h-2 rounded-full transition-all duration-500",
+                            "h-full rounded-full transition-all duration-500",
                             progress === 0 ? "bg-muted" : "bg-amber-400"
                           )}
                           style={{ width: `${progress}%` }}
@@ -371,14 +373,16 @@ export default function Lineup() {
                     
                     {/* Edit Buttons */}
                     {canEdit && !isArchived && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => navigate(`/issues?edit=${selectedIssue.id}`)}
+                          className="flex-1 sm:flex-none text-xs md:text-sm"
                         >
-                          <Pencil className="w-4 h-4 ml-2" />
-                          ערוך ליינאפ
+                          <Pencil className="w-3 h-3 md:w-4 md:h-4 ml-1 md:ml-2" />
+                          <span className="hidden sm:inline">ערוך ליינאפ</span>
+                          <span className="sm:hidden">ערוך</span>
                         </Button>
                         <EditIssueDialog 
                           issue={selectedIssue} 
@@ -388,15 +392,16 @@ export default function Lineup() {
                           variant="outline" 
                           size="sm"
                           onClick={handleMarkAsPrinted}
-                          className="text-green-600 border-green-200 hover:bg-green-50"
+                          className="text-green-600 border-green-200 hover:bg-green-50 flex-1 sm:flex-none text-xs md:text-sm"
                         >
-                          <Check className="w-4 h-4 ml-2" />
-                          סמן כהודפס
+                          <Check className="w-3 h-3 md:w-4 md:h-4 ml-1 md:ml-2" />
+                          <span className="hidden sm:inline">סמן כהודפס</span>
+                          <span className="sm:hidden">הודפס</span>
                         </Button>
                       </div>
                     )}
                     {isArchived && (
-                      <Badge variant="secondary" className="bg-gray-200 text-gray-600">
+                      <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs">
                         ארכיון - תצוגה בלבד
                       </Badge>
                     )}
@@ -407,9 +412,9 @@ export default function Lineup() {
           )}
 
           {/* Legend */}
-          <div className="flex items-center gap-6 text-sm flex-wrap">
+          <div className="flex items-center gap-3 md:gap-6 text-xs md:text-sm flex-wrap">
             <span className="text-muted-foreground">מקרא:</span>
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2 md:gap-4 flex-wrap">
               <StatusBadge status="critical">היום</StatusBadge>
               <StatusBadge status="urgent">יומיים</StatusBadge>
               <StatusBadge status="warning">ממתין</StatusBadge>
