@@ -15,7 +15,7 @@ import {
   useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
   useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
   useLineupItems, useInserts, useEditors, useIssueEditors, useAddIssueEditor, 
-  useRemoveIssueEditor
+  useRemoveIssueEditor, useSwapLineupPages
 } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -68,6 +68,7 @@ interface LineupRow {
   originalPages?: number[]; // Track original pages to detect changes
   wasDesigned?: boolean; // Track if item was designed before editing
   pagesChanged?: boolean; // Track if pages were manually changed (e.g., via swap)
+  swapPartnerId?: string; // Track which item this was swapped with
 }
 
 interface InsertRow {
@@ -94,6 +95,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const deleteInsert = useDeleteInsert();
   const addIssueEditor = useAddIssueEditor();
   const removeIssueEditor = useRemoveIssueEditor();
+  const swapLineupPages = useSwapLineupPages();
   
   // Editors data
   const { data: allEditors = [] } = useEditors();
@@ -263,9 +265,10 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       const row2Pages = [...row2.pages];
       
       // When swapping, both items' pages change, so mark them for standby if they were designed
+      // Also track the swap partner for proper DB update
       return rows.map(row => {
-        if (row.id === id1) return { ...row, pages: row2Pages, pagesChanged: true };
-        if (row.id === id2) return { ...row, pages: row1Pages, pagesChanged: true };
+        if (row.id === id1) return { ...row, pages: row2Pages, pagesChanged: true, swapPartnerId: id2 };
+        if (row.id === id2) return { ...row, pages: row1Pages, pagesChanged: true, swapPartnerId: id1 };
         return row;
       });
     });
@@ -394,9 +397,33 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           }
         }
         
-        // Update or create items
+        // First, handle swapped pairs using the swap function to avoid overlap errors
+        const processedSwapIds = new Set<string>();
         for (const row of lineupRows) {
-          if (row.pages.length > 0 && row.content) {
+          if (row.pagesChanged && row.swapPartnerId && !processedSwapIds.has(row.id)) {
+            const partnerRow = lineupRows.find(r => r.id === row.swapPartnerId);
+            if (partnerRow && !row.id.startsWith('new-') && !partnerRow.id.startsWith('new-')) {
+              const row1Pages = [...row.pages].sort((a, b) => a - b);
+              const row2Pages = [...partnerRow.pages].sort((a, b) => a - b);
+              
+              await swapLineupPages.mutateAsync({
+                item1Id: row.id,
+                item2Id: partnerRow.id,
+                item1Pages: { page_start: row1Pages[0], page_end: row1Pages[row1Pages.length - 1] },
+                item2Pages: { page_start: row2Pages[0], page_end: row2Pages[row2Pages.length - 1] },
+                issueId: existingIssueId,
+              });
+              
+              // Mark both as processed
+              processedSwapIds.add(row.id);
+              processedSwapIds.add(partnerRow.id);
+            }
+          }
+        }
+        
+        // Update or create remaining items (non-swapped ones)
+        for (const row of lineupRows) {
+          if (row.pages.length > 0 && row.content && !processedSwapIds.has(row.id)) {
             const sortedPages = [...row.pages].sort((a, b) => a - b);
             const isExisting = existingRowIds.includes(row.id);
             
