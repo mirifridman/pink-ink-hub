@@ -69,6 +69,7 @@ interface LineupRow {
   wasDesigned?: boolean; // Track if item was designed before editing
   pagesChanged?: boolean; // Track if pages were manually changed (e.g., via swap)
   swapPartnerId?: string; // Track which item this was swapped with
+  orderChanged?: boolean; // Track if row order changed (needs page recalculation)
 }
 
 interface InsertRow {
@@ -320,21 +321,31 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
 
   const moveRowUp = (index: number) => {
     if (index > 0) {
-      const currentRow = lineupRows[index];
-      const targetRow = lineupRows[index - 1];
-      // Swap pages between the two items - only update local state
-      swapRowPages(currentRow.id, targetRow.id);
-      toast.success("העמודים הוחלפו - לחץ 'עדכן שינויים' לשמירה");
+      // Move the row up in the array (change position, not swap pages)
+      setLineupRows(rows => {
+        const newRows = [...rows];
+        const [removed] = newRows.splice(index, 1);
+        newRows.splice(index - 1, 0, { ...removed, orderChanged: true });
+        // Mark the row that was pushed down as well
+        newRows[index] = { ...newRows[index], orderChanged: true };
+        return newRows;
+      });
+      toast.success("הסדר השתנה - לחץ 'עדכן שינויים' לשמירה");
     }
   };
 
   const moveRowDown = (index: number) => {
     if (index < lineupRows.length - 1) {
-      const currentRow = lineupRows[index];
-      const targetRow = lineupRows[index + 1];
-      // Swap pages between the two items - only update local state
-      swapRowPages(currentRow.id, targetRow.id);
-      toast.success("העמודים הוחלפו - לחץ 'עדכן שינויים' לשמירה");
+      // Move the row down in the array (change position, not swap pages)
+      setLineupRows(rows => {
+        const newRows = [...rows];
+        const [removed] = newRows.splice(index, 1);
+        newRows.splice(index + 1, 0, { ...removed, orderChanged: true });
+        // Mark the row that was pushed up as well
+        newRows[index] = { ...newRows[index], orderChanged: true };
+        return newRows;
+      });
+      toast.success("הסדר השתנה - לחץ 'עדכן שינויים' לשמירה");
     }
   };
 
@@ -397,11 +408,33 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           }
         }
         
-        // First, handle swapped pairs using the swap function to avoid overlap errors
+        // Check if order changed - if so, recalculate page numbers based on new order
+        const orderChanged = lineupRows.some(row => row.orderChanged);
+        let recalculatedRows = [...lineupRows];
+        
+        if (orderChanged) {
+          // Recalculate page numbers based on the new order
+          let currentPage = 1;
+          recalculatedRows = lineupRows.map(row => {
+            const pageCount = row.pages.length || 1;
+            const newPages = Array.from({ length: pageCount }, (_, i) => currentPage + i);
+            const pagesActuallyChanged = row.originalPages && 
+              (newPages[0] !== row.originalPages[0] || 
+               newPages[newPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
+            currentPage += pageCount;
+            return {
+              ...row,
+              pages: newPages,
+              pagesChanged: pagesActuallyChanged || row.pagesChanged,
+            };
+          });
+        }
+        
+        // Handle swapped pairs using the swap function to avoid overlap errors
         const processedSwapIds = new Set<string>();
-        for (const row of lineupRows) {
-          if (row.pagesChanged && row.swapPartnerId && !processedSwapIds.has(row.id)) {
-            const partnerRow = lineupRows.find(r => r.id === row.swapPartnerId);
+        for (const row of recalculatedRows) {
+          if (row.pagesChanged && row.swapPartnerId && !row.orderChanged && !processedSwapIds.has(row.id)) {
+            const partnerRow = recalculatedRows.find(r => r.id === row.swapPartnerId);
             if (partnerRow && !row.id.startsWith('new-') && !partnerRow.id.startsWith('new-')) {
               const row1Pages = [...row.pages].sort((a, b) => a - b);
               const row2Pages = [...partnerRow.pages].sort((a, b) => a - b);
@@ -422,7 +455,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         }
         
         // Update or create remaining items (non-swapped ones)
-        for (const row of lineupRows) {
+        for (const row of recalculatedRows) {
           if (row.pages.length > 0 && row.content && !processedSwapIds.has(row.id)) {
             const sortedPages = [...row.pages].sort((a, b) => a - b);
             const isExisting = existingRowIds.includes(row.id);
@@ -431,7 +464,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             const pagesChangedByPosition = row.originalPages && 
               (sortedPages[0] !== row.originalPages[0] || 
                sortedPages[sortedPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
-            const pagesChanged = pagesChangedByPosition || row.pagesChanged;
+            const pagesChanged = pagesChangedByPosition || row.pagesChanged || row.orderChanged;
             const shouldSetStandby = pagesChanged && row.wasDesigned;
             
             if (isExisting) {
