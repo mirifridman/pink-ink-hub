@@ -296,6 +296,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   };
 
   const openSwapModal = (row: LineupRow) => {
+    console.log("openSwapModal called with row:", row);
     setSwapSourceRow(row);
     setSwapTargetId("");
     setShowSwapModal(true);
