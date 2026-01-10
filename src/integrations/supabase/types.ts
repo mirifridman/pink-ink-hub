@@ -666,6 +666,7 @@ export type Database = {
           created_by: string
           id: string
           insert_id: string | null
+          is_personal: boolean | null
           issue_id: string
           lineup_item_id: string | null
           message: string
@@ -675,6 +676,8 @@ export type Database = {
           sent_by: string | null
           status: string
           supplier_id: string | null
+          target_user_id: string | null
+          title: string | null
           type: string
         }
         Insert: {
@@ -684,6 +687,7 @@ export type Database = {
           created_by: string
           id?: string
           insert_id?: string | null
+          is_personal?: boolean | null
           issue_id: string
           lineup_item_id?: string | null
           message: string
@@ -693,6 +697,8 @@ export type Database = {
           sent_by?: string | null
           status?: string
           supplier_id?: string | null
+          target_user_id?: string | null
+          title?: string | null
           type: string
         }
         Update: {
@@ -702,6 +708,7 @@ export type Database = {
           created_by?: string
           id?: string
           insert_id?: string | null
+          is_personal?: boolean | null
           issue_id?: string
           lineup_item_id?: string | null
           message?: string
@@ -711,6 +718,8 @@ export type Database = {
           sent_by?: string | null
           status?: string
           supplier_id?: string | null
+          target_user_id?: string | null
+          title?: string | null
           type?: string
         }
         Relationships: [
