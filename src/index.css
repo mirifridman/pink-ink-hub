@@ -156,24 +156,86 @@
     background: hsl(var(--card) / 0.8);
   }
 
+  /* Glassmorphism card effect */
+  .glass-card {
+    @apply backdrop-blur-xl border rounded-[20px] p-6 relative overflow-hidden transition-all duration-300;
+    background: hsl(var(--card) / 0.6);
+    border-color: hsl(var(--border) / 0.5);
+  }
+
+  .dark .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, hsl(var(--border) / 0.3), transparent);
+  }
+
+  .dark .glass-card::before {
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+  }
+
+  .glass-card-hover:hover {
+    @apply -translate-y-1;
+    background: hsl(var(--card) / 0.8);
+    border-color: hsl(var(--accent) / 0.3);
+  }
+
+  .dark .glass-card-hover:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: hsl(var(--accent) / 0.3);
+  }
+
+  /* Text shadow for clock */
+  .text-shadow-lg {
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
   .status-critical {
     @apply bg-red-500/10 text-red-600 border-red-500/20;
+  }
+
+  .dark .status-critical {
+    @apply bg-red-500/20 text-red-400 border-red-500/30;
   }
 
   .status-urgent {
     @apply bg-orange-500/10 text-orange-600 border-orange-500/20;
   }
 
+  .dark .status-urgent {
+    @apply bg-orange-500/20 text-orange-400 border-orange-500/30;
+  }
+
   .status-warning {
     @apply bg-yellow-500/10 text-yellow-700 border-yellow-500/20;
+  }
+
+  .dark .status-warning {
+    @apply bg-yellow-500/20 text-yellow-400 border-yellow-500/30;
   }
 
   .status-success {
     @apply bg-emerald-500/10 text-emerald-600 border-emerald-500/20;
   }
 
+  .dark .status-success {
+    @apply bg-emerald-500/20 text-emerald-400 border-emerald-500/30;
+  }
+
   .status-waiting {
     @apply bg-sky-500/10 text-sky-600 border-sky-500/20;
+  }
+
+  .dark .status-waiting {
+    @apply bg-sky-500/20 text-sky-400 border-sky-500/30;
   }
 }
 

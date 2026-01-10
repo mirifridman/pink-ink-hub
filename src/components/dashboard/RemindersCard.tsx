@@ -1,8 +1,9 @@
-import { Bell, Check, X, Mail, MessageCircle, AlertTriangle } from "lucide-react";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/ui/NeonCard";
+import { Bell, Check, X, Mail, MessageCircle, AlertTriangle, Plus, List } from "lucide-react";
+import { GlassCard, GlassCardHeader, GlassCardContent } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Link } from "react-router-dom";
 
 interface Reminder {
   id: string;
@@ -21,26 +22,23 @@ interface RemindersCardProps {
 
 export function RemindersCard({ reminders, onApprove, onDismiss }: RemindersCardProps) {
   return (
-    <NeonCard className="col-span-full lg:col-span-1">
-      <NeonCardHeader>
-        <NeonCardTitle className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-accent" />
-          תזכורות ממתינות לאישור
-        </NeonCardTitle>
-      </NeonCardHeader>
-      <NeonCardContent>
+    <GlassCard className="col-span-full lg:col-span-1 h-full" hover={false}>
+      <GlassCardHeader icon={Bell} title="תזכורות ממתינות לאישור" />
+      <GlassCardContent>
         {reminders.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>אין תזכורות ממתינות</p>
+          <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+            <div className="text-5xl mb-4 opacity-30">🔔</div>
+            <div className="text-sm">אין תזכורות ממתינות</div>
           </div>
         ) : (
           <div className="space-y-3">
             {reminders.slice(0, 5).map((reminder) => (
               <div
                 key={reminder.id}
-                className={`flex items-center justify-between p-4 rounded-xl bg-muted/50 ${
-                  !reminder.hasContactInfo ? "border border-orange-500/50" : ""
+                className={`flex items-center justify-between p-4 rounded-xl bg-muted/30 dark:bg-white/[0.02] border transition-all duration-300 ${
+                  !reminder.hasContactInfo 
+                    ? "border-orange-500/50" 
+                    : "border-border/50 dark:border-white/[0.08]"
                 }`}
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -98,7 +96,31 @@ export function RemindersCard({ reminders, onApprove, onDismiss }: RemindersCard
             ))}
           </div>
         )}
-      </NeonCardContent>
-    </NeonCard>
+        
+        {/* Quick Actions */}
+        <div className="flex gap-2.5 mt-4">
+          <Button 
+            variant="outline" 
+            className="flex-1 py-3 bg-muted/30 dark:bg-white/[0.05] border-border/50 dark:border-white/[0.08] hover:bg-accent/20 hover:border-accent transition-all duration-300"
+            asChild
+          >
+            <Link to="/reminders">
+              <Plus className="w-4 h-4 ml-2" />
+              תזכורת חדשה
+            </Link>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="flex-1 py-3 bg-muted/30 dark:bg-white/[0.05] border-border/50 dark:border-white/[0.08] hover:bg-accent/20 hover:border-accent transition-all duration-300"
+            asChild
+          >
+            <Link to="/reminders">
+              <List className="w-4 h-4 ml-2" />
+              כל התזכורות
+            </Link>
+          </Button>
+        </div>
+      </GlassCardContent>
+    </GlassCard>
   );
 }

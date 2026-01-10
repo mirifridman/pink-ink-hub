@@ -4,7 +4,7 @@ import { UrgentItemsCard } from "@/components/dashboard/UrgentItemsCard";
 import { PendingTasksCard } from "@/components/dashboard/PendingTasksCard";
 import { ActiveIssuesCard } from "@/components/dashboard/ActiveIssuesCard";
 import { RemindersCard } from "@/components/dashboard/RemindersCard";
-import { LiveDateTime } from "@/components/LiveDateTime";
+import { TimeWidget } from "@/components/dashboard/TimeWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   useActiveIssues, 
@@ -16,7 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sun, Sunrise, Cloud, Sunset, Moon, Star, Sparkles } from "lucide-react";
+import { Sun, Sunrise, Cloud, Sunset, Moon, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface GreetingData {
@@ -66,6 +66,8 @@ export default function Dashboard() {
   const { data: pendingReminders, isLoading: remindersLoading } = usePendingReminders();
   const { data: urgentCounts, isLoading: countsLoading } = useUrgentItemsCounts();
 
+  const queryClient = useQueryClient();
+
   const approveReminder = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -101,7 +103,6 @@ export default function Dashboard() {
   });
 
   const handleApproveReminder = (id: string) => {
-    // Find the reminder and check if it has contact info
     const reminder = pendingReminders?.find(r => r.id === id);
     if (reminder && !reminder.hasContactInfo) {
       toast.error("לא ניתן לשלוח הקצאה, חסרים פרטי קשר");
@@ -114,56 +115,72 @@ export default function Dashboard() {
     dismissReminder.mutate(id);
   };
 
-  const queryClient = useQueryClient();
-
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "משתמש";
 
   return (
     <AppLayout>
-      <div className="space-y-8 animate-fade-in-up">
+      {/* Background gradient for dark mode */}
+      <div className="fixed inset-0 pointer-events-none dark:bg-[radial-gradient(ellipse_at_20%_20%,hsl(var(--accent)/0.08)_0%,transparent_50%),radial-gradient(ellipse_at_80%_80%,hsl(280_100%_60%/0.05)_0%,transparent_50%)]" />
+      
+      <div className="space-y-8 animate-fade-in-up relative z-10">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-rubik font-bold text-foreground flex items-center gap-2">
-            <greeting.Icon className={`w-8 h-8 ${greeting.iconColor}`} />
-            {greeting.text} {firstName}!
-          </h1>
-          <p className="text-muted-foreground mt-1">הנה סיכום מהיר של מה שקורה היום</p>
-        </div>
+        <header className="flex items-center gap-4">
+          <span className="text-[40px] animate-wave">👋</span>
+          <div>
+            <h1 className="text-3xl font-rubik font-bold flex items-center gap-2">
+              <greeting.Icon className={`w-8 h-8 ${greeting.iconColor}`} />
+              {greeting.text} {firstName}!
+            </h1>
+            <p className="text-muted-foreground mt-1">הנה סיכום מהיר של מה שקורה היום</p>
+          </div>
+        </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <LiveDateTime />
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+          {/* Row 1 */}
+          <div className="lg:col-span-3">
+            <TimeWidget />
+          </div>
+          
           {countsLoading ? (
-            <Skeleton className="h-48 col-span-full lg:col-span-1" />
+            <Skeleton className="h-48 lg:col-span-3" />
           ) : (
-            <UrgentItemsCard 
-              critical={urgentCounts?.critical || 0} 
-              urgent={urgentCounts?.urgent || 0} 
-              normal={urgentCounts?.normal || 0} 
-            />
+            <div className="lg:col-span-3">
+              <UrgentItemsCard 
+                critical={urgentCounts?.critical || 0} 
+                urgent={urgentCounts?.urgent || 0} 
+                normal={urgentCounts?.normal || 0} 
+              />
+            </div>
           )}
+          
           {issuesLoading ? (
-            <Skeleton className="h-48 col-span-full lg:col-span-2" />
+            <Skeleton className="h-48 lg:col-span-6" />
           ) : (
-            <ActiveIssuesCard issues={activeIssues || []} />
+            <div className="lg:col-span-6">
+              <ActiveIssuesCard issues={activeIssues || []} />
+            </div>
           )}
-        </div>
 
-        {/* Tasks and Reminders */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Row 2 */}
           {tasksLoading ? (
-            <Skeleton className="h-64 col-span-full lg:col-span-1" />
+            <Skeleton className="h-64 lg:col-span-6" />
           ) : (
-            <PendingTasksCard tasks={pendingTasks || []} />
+            <div className="lg:col-span-6">
+              <PendingTasksCard tasks={pendingTasks || []} />
+            </div>
           )}
+          
           {remindersLoading ? (
-            <Skeleton className="h-64 col-span-full lg:col-span-1" />
+            <Skeleton className="h-64 lg:col-span-6" />
           ) : (
-            <RemindersCard
-              reminders={pendingReminders || []}
-              onApprove={handleApproveReminder}
-              onDismiss={handleDismissReminder}
-            />
+            <div className="lg:col-span-6">
+              <RemindersCard
+                reminders={pendingReminders || []}
+                onApprove={handleApproveReminder}
+                onDismiss={handleDismissReminder}
+              />
+            </div>
           )}
         </div>
       </div>
