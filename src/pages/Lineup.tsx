@@ -44,6 +44,7 @@ import { EditableStatusCell } from "@/components/lineup/EditableStatusCell";
 import { EditableTextField } from "@/components/lineup/EditableTextField";
 import { CommentsSidePanel } from "@/components/lineup/CommentsSidePanel";
 import { FlatplanView } from "@/components/lineup/FlatplanView";
+import { FlatplanExportView } from "@/components/lineup/FlatplanExportView";
 import { getContentTypeColor, getContentTypeLabel } from "@/components/lineup/ContentTypeSelect";
 import { EditIssueDialog } from "@/components/issues/EditIssueDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,6 +77,7 @@ export default function Lineup() {
   const { hasPermission, user, role } = useAuth();
   const queryClient = useQueryClient();
   const lineupContainerRef = useRef<HTMLDivElement>(null);
+  const exportContainerRef = useRef<HTMLDivElement>(null);
   
   // Side panel state
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -172,18 +174,25 @@ export default function Lineup() {
   };
 
   const handleExportPdf = async () => {
-    if (!lineupContainerRef.current) return;
+    if (!exportContainerRef.current || !selectedIssue || !lineupItems) return;
     try {
+      toast.info('מכין את הקובץ...');
       const opt = {
-        margin: 10,
-        filename: `lineup-${selectedIssue?.magazine?.name}-${selectedIssue?.issue_number}.pdf`,
+        margin: 0,
+        filename: `lineup-${selectedIssue?.magazine?.name}-גיליון-${selectedIssue?.issue_number}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'landscape' as const }
+        html2canvas: { 
+          scale: 2, 
+          backgroundColor: '#ffffff',
+          useCORS: true,
+        },
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
-      await html2pdf().set(opt).from(lineupContainerRef.current).save();
+      await html2pdf().set(opt).from(exportContainerRef.current).save();
       toast.success('הליינאפ יוצא ל-PDF בהצלחה!');
     } catch (error) {
+      console.error('PDF export error:', error);
       toast.error('שגיאה בייצוא ה-PDF');
     }
   };
@@ -717,6 +726,18 @@ export default function Lineup() {
           contentTitle={selectedItemContent}
           onCommentCountChange={fetchCommentsCounts}
         />
+
+        {/* Hidden export container for PDF */}
+        <div className="fixed left-[-9999px] top-0 overflow-hidden">
+          {selectedIssue && lineupItems && (
+            <FlatplanExportView
+              ref={exportContainerRef}
+              lineupItems={lineupItems}
+              templatePages={selectedIssue.template_pages}
+              issue={selectedIssue}
+            />
+          )}
+        </div>
       </AppLayout>
     </TooltipProvider>
   );
