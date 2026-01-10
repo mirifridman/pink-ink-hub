@@ -367,18 +367,21 @@ export function useSwapLineupPages() {
       item2Pages: { page_start: number; page_end: number };
       issueId: string;
     }) => {
-      // Update item1 with item2's pages and set to standby
+      // To avoid the check_page_overlap trigger blocking the swap,
+      // we first move item1 to temporary negative pages, then move item2 to item1's pages,
+      // then move item1 to item2's original pages
+      
+      // Step 1: Move item1 to temporary negative pages to avoid overlap check
       const { error: error1 } = await supabase
         .from("lineup_items")
         .update({ 
-          page_start: item2Pages.page_start,
-          page_end: item2Pages.page_end,
-          design_status: 'standby'
+          page_start: -999,
+          page_end: -999,
         })
         .eq("id", item1Id);
       if (error1) throw error1;
       
-      // Update item2 with item1's pages and set to standby
+      // Step 2: Update item2 with item1's original pages
       const { error: error2 } = await supabase
         .from("lineup_items")
         .update({ 
@@ -388,6 +391,17 @@ export function useSwapLineupPages() {
         })
         .eq("id", item2Id);
       if (error2) throw error2;
+      
+      // Step 3: Update item1 with item2's original pages
+      const { error: error3 } = await supabase
+        .from("lineup_items")
+        .update({ 
+          page_start: item2Pages.page_start,
+          page_end: item2Pages.page_end,
+          design_status: 'standby'
+        })
+        .eq("id", item1Id);
+      if (error3) throw error3;
       
       return issueId;
     },
