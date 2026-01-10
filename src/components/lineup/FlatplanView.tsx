@@ -39,17 +39,17 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
     return map;
   }, [lineupItems]);
 
-  // Generate page pairs (spreads)
-  const spreads: { left: number | null; right: number | null }[] = [];
+  // Generate page pairs (spreads) - RTL: right page has lower number
+  const spreads: { right: number; left: number | null }[] = [];
   
   // Page 1 is always alone (cover)
-  spreads.push({ left: 1, right: null });
+  spreads.push({ right: 1, left: null });
   
-  // Rest of pages in pairs (2-3, 4-5, etc.)
+  // Rest of pages in pairs (2-3, 4-5, etc.) - in RTL: right=2, left=3
   for (let i = 2; i <= templatePages; i += 2) {
     spreads.push({ 
-      left: i, 
-      right: i + 1 <= templatePages ? i + 1 : null 
+      right: i, 
+      left: i + 1 <= templatePages ? i + 1 : null 
     });
   }
 
@@ -211,14 +211,9 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
             <span className="text-xs font-medium opacity-80">
               {getContentTypeLabel(item.content_type)}
             </span>
-            <span className="text-xs font-bold line-clamp-2 mt-0.5">
+            <span className="text-xs font-bold line-clamp-3 mt-0.5">
               {item.content}
             </span>
-            {item.page_start !== item.page_end && (
-              <span className="text-xs opacity-70 mt-0.5">
-                עמ׳ {item.page_start}-{item.page_end}
-              </span>
-            )}
           </div>
         )}
 
@@ -256,21 +251,19 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
         </div>
       </div>
 
-      {/* Spreads - Multi-column responsive grid */}
+      {/* Spreads - Multi-column responsive grid - RTL: right page (lower) on right, left page (higher) on left */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {spreads.map((spread, idx) => (
           <div 
             key={idx} 
-            className="flex justify-center gap-1 p-2 bg-muted/20 rounded-lg border border-muted/40"
+            className="flex flex-row-reverse justify-center gap-1 p-2 bg-muted/20 rounded-lg border border-muted/40"
           >
-            {/* RTL: right page first (higher number), then left */}
-            {spread.right && (
-              <div className="w-32 lg:w-36">
-                {renderPage(spread.right)}
-              </div>
-            )}
+            {/* flex-row-reverse with RTL: renders right page on right side, left page on left side */}
+            <div className={cn("w-32 lg:w-36", !spread.left && "mx-auto")}>
+              {renderPage(spread.right)}
+            </div>
             {spread.left && (
-              <div className={cn("w-32 lg:w-36", !spread.right && "mx-auto")}>
+              <div className="w-32 lg:w-36">
                 {renderPage(spread.left)}
               </div>
             )}
