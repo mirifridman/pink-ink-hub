@@ -66,26 +66,23 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
     setDragOverPage(null);
   }, []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent, targetPageStart: number) => {
+  const handleDrop = useCallback(async (e: React.DragEvent, dropPageNum: number) => {
     e.preventDefault();
     setDragOverPage(null);
 
     if (!draggedItem) return;
 
-    const pageSpan = draggedItem.page_end - draggedItem.page_start;
-    const newPageEnd = targetPageStart + pageSpan;
-
-    // Check if target pages are valid
-    if (newPageEnd > templatePages) {
-      toast.error("אין מספיק עמודים ביעד");
+    // Get the item at the drop location (if any)
+    const targetItem = pageItemMap.get(dropPageNum);
+    
+    // If dropping on self, do nothing
+    if (targetItem?.id === draggedItem.id) {
+      setDraggedItem(null);
       return;
     }
 
-    // Check if target pages are occupied by another item
-    const targetItem = pageItemMap.get(targetPageStart);
-    
-    if (targetItem && targetItem.id !== draggedItem.id) {
-      // Swap pages between two items
+    if (targetItem) {
+      // Swap pages between two items - use the actual first pages of each item
       try {
         await swapLineupPages.mutateAsync({
           item1Id: draggedItem.id,
@@ -95,16 +92,38 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
           issueId,
         });
         onUpdate();
+        toast.success("העמודים הוחלפו בהצלחה");
       } catch (error) {
+        console.error("Swap error:", error);
         toast.error("שגיאה בהחלפת עמודים");
       }
     } else {
-      // Move to empty space
+      // Move to empty space - use the drop page as the new start
+      const pageSpan = draggedItem.page_end - draggedItem.page_start;
+      const newPageEnd = dropPageNum + pageSpan;
+
+      // Check if target pages are valid
+      if (newPageEnd > templatePages) {
+        toast.error("אין מספיק עמודים ביעד");
+        setDraggedItem(null);
+        return;
+      }
+
+      // Check if any pages in the new range are occupied (except by dragged item)
+      for (let p = dropPageNum; p <= newPageEnd; p++) {
+        const occupyingItem = pageItemMap.get(p);
+        if (occupyingItem && occupyingItem.id !== draggedItem.id) {
+          toast.error("העמודים תפוסים");
+          setDraggedItem(null);
+          return;
+        }
+      }
+
       const wasDesigned = draggedItem.design_status === 'designed' || draggedItem.is_designed === true;
       try {
         await updateLineupPages.mutateAsync({
           id: draggedItem.id,
-          page_start: targetPageStart,
+          page_start: dropPageNum,
           page_end: newPageEnd,
           wasDesigned,
         });
@@ -115,6 +134,7 @@ export function FlatplanView({ lineupItems, templatePages, issueId, onUpdate }: 
           toast.success("העמודים עודכנו");
         }
       } catch (error) {
+        console.error("Update error:", error);
         toast.error("שגיאה בעדכון");
       }
     }
