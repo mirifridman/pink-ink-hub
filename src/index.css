@@ -6,66 +6,6 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 220 20% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
-
-    --primary: 220 15% 20%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 330 100% 60%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 220 10% 92%;
-    --muted-foreground: 220 10% 45%;
-
-    --accent: 330 100% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 10% 88%;
-    --input: 220 10% 88%;
-    --ring: 330 100% 60%;
-
-    --radius: 0.75rem;
-
-    /* Custom colors */
-    --neon-pink: 330 100% 60%;
-    --neon-pink-glow: 330 100% 70%;
-    --deep-gray: 220 15% 20%;
-    --soft-gray: 220 10% 40%;
-    
-    /* Status colors */
-    --status-critical: 0 84% 55%;
-    --status-urgent: 25 95% 55%;
-    --status-warning: 45 100% 50%;
-    --status-success: 145 65% 42%;
-    --status-waiting: 200 80% 55%;
-
-    /* Neon shadows */
-    --shadow-neon: 0 4px 20px -2px hsl(330 100% 60% / 0.25);
-    --shadow-neon-lg: 0 8px 40px -4px hsl(330 100% 60% / 0.35);
-    --shadow-card: 0 4px 24px -4px hsl(220 20% 10% / 0.08);
-    --shadow-card-hover: 0 8px 32px -4px hsl(220 20% 10% / 0.12);
-
-    --sidebar-background: 220 15% 15%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 330 100% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 22%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 25%;
-    --sidebar-ring: 330 100% 60%;
-  }
-
-  .dark {
     --background: 220 20% 8%;
     --foreground: 0 0% 95%;
 
@@ -93,6 +33,27 @@
     --border: 220 15% 20%;
     --input: 220 15% 20%;
     --ring: 330 100% 60%;
+
+    --radius: 0.75rem;
+
+    /* Custom colors */
+    --neon-pink: 330 100% 60%;
+    --neon-pink-glow: 330 100% 70%;
+    --deep-gray: 220 15% 20%;
+    --soft-gray: 220 10% 40%;
+    
+    /* Status colors */
+    --status-critical: 0 84% 55%;
+    --status-urgent: 25 95% 55%;
+    --status-warning: 45 100% 50%;
+    --status-success: 145 65% 42%;
+    --status-waiting: 200 80% 55%;
+
+    /* Neon shadows */
+    --shadow-neon: 0 4px 20px -2px hsl(330 100% 60% / 0.25);
+    --shadow-neon-lg: 0 8px 40px -4px hsl(330 100% 60% / 0.35);
+    --shadow-card: 0 4px 24px -4px hsl(220 20% 10% / 0.08);
+    --shadow-card-hover: 0 8px 32px -4px hsl(220 20% 10% / 0.12);
 
     --sidebar-background: 220 20% 6%;
     --sidebar-foreground: 0 0% 95%;
@@ -159,11 +120,6 @@
   /* Glassmorphism card effect */
   .glass-card {
     @apply backdrop-blur-xl border rounded-[20px] p-6 relative overflow-hidden transition-all duration-300;
-    background: hsl(var(--card) / 0.6);
-    border-color: hsl(var(--border) / 0.5);
-  }
-
-  .dark .glass-card {
     background: rgba(255, 255, 255, 0.03);
     border-color: rgba(255, 255, 255, 0.08);
   }
@@ -175,20 +131,11 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(to right, transparent, hsl(var(--border) / 0.3), transparent);
-  }
-
-  .dark .glass-card::before {
     background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
   }
 
   .glass-card-hover:hover {
     @apply -translate-y-1;
-    background: hsl(var(--card) / 0.8);
-    border-color: hsl(var(--accent) / 0.3);
-  }
-
-  .dark .glass-card-hover:hover {
     background: rgba(255, 255, 255, 0.06);
     border-color: hsl(var(--accent) / 0.3);
   }
@@ -199,42 +146,22 @@
   }
 
   .status-critical {
-    @apply bg-red-500/10 text-red-600 border-red-500/20;
-  }
-
-  .dark .status-critical {
     @apply bg-red-500/20 text-red-400 border-red-500/30;
   }
 
   .status-urgent {
-    @apply bg-orange-500/10 text-orange-600 border-orange-500/20;
-  }
-
-  .dark .status-urgent {
     @apply bg-orange-500/20 text-orange-400 border-orange-500/30;
   }
 
   .status-warning {
-    @apply bg-yellow-500/10 text-yellow-700 border-yellow-500/20;
-  }
-
-  .dark .status-warning {
     @apply bg-yellow-500/20 text-yellow-400 border-yellow-500/30;
   }
 
   .status-success {
-    @apply bg-emerald-500/10 text-emerald-600 border-emerald-500/20;
-  }
-
-  .dark .status-success {
     @apply bg-emerald-500/20 text-emerald-400 border-emerald-500/30;
   }
 
   .status-waiting {
-    @apply bg-sky-500/10 text-sky-600 border-sky-500/20;
-  }
-
-  .dark .status-waiting {
     @apply bg-sky-500/20 text-sky-400 border-sky-500/30;
   }
 }
