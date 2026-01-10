@@ -403,6 +403,40 @@ export function useSwapLineupPages() {
   });
 }
 
+// Batch update lineup item pages (used when reordering)
+export function useBatchUpdateLineupPages() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      updates,
+      issueId 
+    }: { 
+      updates: Array<{
+        id: string;
+        page_start: number;
+        page_end: number;
+        set_standby: boolean;
+      }>;
+      issueId: string;
+    }) => {
+      const { error } = await supabase.rpc('batch_update_lineup_pages', {
+        p_updates: updates
+      });
+      
+      if (error) throw error;
+      
+      return issueId;
+    },
+    onSuccess: (issueId) => {
+      queryClient.invalidateQueries({ queryKey: ["lineupItems", issueId] });
+    },
+    onError: (error) => {
+      toast.error("שגיאה בעדכון עמודים: " + error.message);
+    },
+  });
+}
+
 // Update lineup item pages and set to standby if was designed
 export function useUpdateLineupPages() {
   const queryClient = useQueryClient();

@@ -966,6 +966,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      batch_update_lineup_pages: {
+        Args: { p_updates: Json }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

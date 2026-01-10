@@ -15,7 +15,7 @@ import {
   useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
   useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
   useLineupItems, useInserts, useEditors, useIssueEditors, useAddIssueEditor, 
-  useRemoveIssueEditor, useSwapLineupPages
+  useRemoveIssueEditor, useSwapLineupPages, useBatchUpdateLineupPages
 } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -97,6 +97,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const addIssueEditor = useAddIssueEditor();
   const removeIssueEditor = useRemoveIssueEditor();
   const swapLineupPages = useSwapLineupPages();
+  const batchUpdateLineupPages = useBatchUpdateLineupPages();
   
   // Editors data
   const { data: allEditors = [] } = useEditors();
@@ -428,65 +429,35 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               pagesChanged: pagesActuallyChanged || row.pagesChanged,
             };
           });
-        }
-        
-        // Handle swapped pairs using the swap function to avoid overlap errors
-        const processedSwapIds = new Set<string>();
-        for (const row of recalculatedRows) {
-          if (row.pagesChanged && row.swapPartnerId && !row.orderChanged && !processedSwapIds.has(row.id)) {
-            const partnerRow = recalculatedRows.find(r => r.id === row.swapPartnerId);
-            if (partnerRow && !row.id.startsWith('new-') && !partnerRow.id.startsWith('new-')) {
-              const row1Pages = [...row.pages].sort((a, b) => a - b);
-              const row2Pages = [...partnerRow.pages].sort((a, b) => a - b);
-              
-              await swapLineupPages.mutateAsync({
-                item1Id: row.id,
-                item2Id: partnerRow.id,
-                item1Pages: { page_start: row1Pages[0], page_end: row1Pages[row1Pages.length - 1] },
-                item2Pages: { page_start: row2Pages[0], page_end: row2Pages[row2Pages.length - 1] },
-                issueId: existingIssueId,
-              });
-              
-              // Mark both as processed
-              processedSwapIds.add(row.id);
-              processedSwapIds.add(partnerRow.id);
-            }
-          }
-        }
-        
-        // Update or create remaining items (non-swapped ones)
-        for (const row of recalculatedRows) {
-          if (row.pages.length > 0 && row.content && !processedSwapIds.has(row.id)) {
-            const sortedPages = [...row.pages].sort((a, b) => a - b);
-            const isExisting = existingRowIds.includes(row.id);
-            
-            // Check if pages changed for items that were designed
-            const pagesChangedByPosition = row.originalPages && 
-              (sortedPages[0] !== row.originalPages[0] || 
-               sortedPages[sortedPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
-            const pagesChanged = pagesChangedByPosition || row.pagesChanged || row.orderChanged;
-            const shouldSetStandby = pagesChanged && row.wasDesigned;
-            
-            if (isExisting) {
-              const updateData: any = {
+          
+          // Use batch update for all existing items when order changed
+          const batchUpdates = recalculatedRows
+            .filter(row => existingRowIds.includes(row.id) && row.pages.length > 0)
+            .map(row => {
+              const sortedPages = [...row.pages].sort((a, b) => a - b);
+              const pagesActuallyChanged = row.originalPages && 
+                (sortedPages[0] !== row.originalPages[0] || 
+                 sortedPages[sortedPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
+              const shouldSetStandby = (pagesActuallyChanged || row.orderChanged) && row.wasDesigned;
+              return {
                 id: row.id,
                 page_start: sortedPages[0],
                 page_end: sortedPages[sortedPages.length - 1],
-                content: row.content,
-                content_type: row.contentType || null,
-                supplier_id: row.supplierIds[0] || null,
-                source: row.source || null,
-                notes: row.notes || null,
-                responsible_editor_id: row.responsibleEditorId || null,
+                set_standby: shouldSetStandby,
               };
-              
-              // Set to standby if pages changed and was designed
-              if (shouldSetStandby) {
-                updateData.design_status = 'standby';
-              }
-              
-              await updateLineupItem.mutateAsync(updateData);
-            } else {
+            });
+          
+          if (batchUpdates.length > 0) {
+            await batchUpdateLineupPages.mutateAsync({
+              updates: batchUpdates,
+              issueId: existingIssueId,
+            });
+          }
+          
+          // Create new items
+          for (const row of recalculatedRows) {
+            if (row.pages.length > 0 && row.content && !existingRowIds.includes(row.id)) {
+              const sortedPages = [...row.pages].sort((a, b) => a - b);
               await createLineupItem.mutateAsync({
                 issue_id: existingIssueId,
                 page_start: sortedPages[0],
@@ -502,6 +473,82 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 designer_notes: null,
                 responsible_editor_id: row.responsibleEditorId || null,
               } as any);
+            }
+          }
+        } else {
+          // No order change - handle swapped pairs using the swap function
+          const processedSwapIds = new Set<string>();
+          for (const row of recalculatedRows) {
+            if (row.pagesChanged && row.swapPartnerId && !processedSwapIds.has(row.id)) {
+              const partnerRow = recalculatedRows.find(r => r.id === row.swapPartnerId);
+              if (partnerRow && !row.id.startsWith('new-') && !partnerRow.id.startsWith('new-')) {
+                const row1Pages = [...row.pages].sort((a, b) => a - b);
+                const row2Pages = [...partnerRow.pages].sort((a, b) => a - b);
+                
+                await swapLineupPages.mutateAsync({
+                  item1Id: row.id,
+                  item2Id: partnerRow.id,
+                  item1Pages: { page_start: row1Pages[0], page_end: row1Pages[row1Pages.length - 1] },
+                  item2Pages: { page_start: row2Pages[0], page_end: row2Pages[row2Pages.length - 1] },
+                  issueId: existingIssueId,
+                });
+                
+                // Mark both as processed
+                processedSwapIds.add(row.id);
+                processedSwapIds.add(partnerRow.id);
+              }
+            }
+          }
+          
+          // Update or create remaining items (non-swapped ones)
+          for (const row of recalculatedRows) {
+            if (row.pages.length > 0 && row.content && !processedSwapIds.has(row.id)) {
+              const sortedPages = [...row.pages].sort((a, b) => a - b);
+              const isExisting = existingRowIds.includes(row.id);
+              
+              // Check if pages changed for items that were designed
+              const pagesChangedByPosition = row.originalPages && 
+                (sortedPages[0] !== row.originalPages[0] || 
+                 sortedPages[sortedPages.length - 1] !== row.originalPages[row.originalPages.length - 1]);
+              const pagesChanged = pagesChangedByPosition || row.pagesChanged;
+              const shouldSetStandby = pagesChanged && row.wasDesigned;
+              
+              if (isExisting) {
+                const updateData: any = {
+                  id: row.id,
+                  page_start: sortedPages[0],
+                  page_end: sortedPages[sortedPages.length - 1],
+                  content: row.content,
+                  content_type: row.contentType || null,
+                  supplier_id: row.supplierIds[0] || null,
+                  source: row.source || null,
+                  notes: row.notes || null,
+                  responsible_editor_id: row.responsibleEditorId || null,
+                };
+                
+                // Set to standby if pages changed and was designed
+                if (shouldSetStandby) {
+                  updateData.design_status = 'standby';
+                }
+                
+                await updateLineupItem.mutateAsync(updateData);
+              } else {
+                await createLineupItem.mutateAsync({
+                  issue_id: existingIssueId,
+                  page_start: sortedPages[0],
+                  page_end: sortedPages[sortedPages.length - 1],
+                  content: row.content,
+                  content_type: row.contentType || null,
+                  supplier_id: row.supplierIds[0] || null,
+                  source: row.source || null,
+                  notes: row.notes || null,
+                  text_ready: false,
+                  files_ready: false,
+                  is_designed: false,
+                  designer_notes: null,
+                  responsible_editor_id: row.responsibleEditorId || null,
+                } as any);
+              }
             }
           }
         }
