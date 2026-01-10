@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Download, FileText, Loader2, CalendarIcon } from "lucide-react";
+import { Download, FileText, Loader2, CalendarIcon, FileSpreadsheet } from "lucide-react";
 import { useIssues, useSuppliers } from "@/hooks/useIssues";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -253,7 +253,7 @@ export function SupplierAssignmentsReport() {
         : `supplier-assignments-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
 
       const opt = {
-        margin: 10,
+        margin: [20, 10, 20, 10] as [number, number, number, number], // top, right, bottom, left in mm (2cm = 20mm top/bottom)
         filename,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
@@ -261,7 +261,8 @@ export function SupplierAssignmentsReport() {
           backgroundColor: '#ffffff',
           useCORS: true,
         },
-        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
       
       await html2pdf().set(opt).from(clonedReport).save();
@@ -272,6 +273,54 @@ export function SupplierAssignmentsReport() {
     } catch (error) {
       toast.error('שגיאה בייצוא ה-PDF');
     }
+  };
+
+  const handleExportExcel = () => {
+    const rows: string[][] = [];
+    
+    // Header row
+    rows.push(['ספק', 'סוג ספק', 'תוכן', 'עמודים', 'סוג תוכן', 'סכום']);
+    
+    // Data rows
+    Object.entries(groupedBySupplier).forEach(([supplierId, data]) => {
+      data.assignments.forEach((assignment) => {
+        rows.push([
+          data.supplier_name,
+          getSupplierTypeLabel(data.supplier_type),
+          assignment.content,
+          assignment.type === 'lineup' ? `${assignment.page_start}-${assignment.page_end}` : '-',
+          assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-'),
+          assignment.amount > 0 ? assignment.amount.toString() : '0'
+        ]);
+      });
+      // Supplier subtotal
+      rows.push([`סה״כ ${data.supplier_name}`, '', '', data.totalPages.toString(), '', data.totalAmount.toString()]);
+      rows.push([]); // Empty row separator
+    });
+    
+    // Grand total
+    rows.push([
+      'סה״כ כללי',
+      `${Object.keys(groupedBySupplier).length} ספקים`,
+      '',
+      Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalPages, 0).toString(),
+      '',
+      grandTotalAmount.toString()
+    ]);
+    
+    // Convert to CSV with BOM for Hebrew support
+    const BOM = '\uFEFF';
+    const csvContent = BOM + rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `supplier-report-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast.success('הדו״ח יוצא ל-Excel בהצלחה!');
   };
 
   const getSupplierTypeLabel = (type: string | null) => {
@@ -400,11 +449,15 @@ export function SupplierAssignmentsReport() {
         <div className="flex items-center gap-2 mr-auto">
           <Button variant="outline" onClick={() => handleExportPdf("detailed")}>
             <Download className="w-4 h-4 ml-2" />
-            ייצוא מפורט
+            PDF מפורט
           </Button>
           <Button variant="outline" onClick={() => handleExportPdf("summary")}>
             <FileText className="w-4 h-4 ml-2" />
-            ייצוא סיכום
+            PDF סיכום
+          </Button>
+          <Button variant="outline" onClick={handleExportExcel}>
+            <FileSpreadsheet className="w-4 h-4 ml-2" />
+            Excel
           </Button>
         </div>
       </div>
@@ -593,18 +646,16 @@ export function SupplierAssignmentsReport() {
                     <th className="p-3 text-right font-bold text-gray-800">ספק</th>
                     <th className="p-3 text-right font-bold text-gray-800">סוג</th>
                     <th className="p-3 text-center font-bold text-gray-800">עמודים</th>
-                    <th className="p-3 text-center font-bold text-gray-800">שילובים</th>
                     <th className="p-3 text-center font-bold text-gray-800">סה״כ פריטים</th>
                     <th className="p-3 text-center font-bold text-gray-800">סכום</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(groupedBySupplier).map(([supplierId, data]) => (
-                    <tr key={supplierId} className="border-b border-gray-200">
+                    <tr key={supplierId} className="border-b border-gray-200" style={{ pageBreakInside: 'avoid' }}>
                       <td className="p-3 text-gray-800 font-medium">{data.supplier_name}</td>
                       <td className="p-3 text-gray-600">{getSupplierTypeLabel(data.supplier_type)}</td>
                       <td className="p-3 text-center text-gray-800">{data.totalPages}</td>
-                      <td className="p-3 text-center text-gray-800">{data.totalInserts}</td>
                       <td className="p-3 text-center font-bold text-gray-900">{data.assignments.length}</td>
                       <td className="p-3 text-center font-bold text-green-700">{formatCurrency(data.totalAmount)}</td>
                     </tr>
@@ -616,9 +667,6 @@ export function SupplierAssignmentsReport() {
                     <td className="p-3 text-gray-600">{Object.keys(groupedBySupplier).length} ספקים</td>
                     <td className="p-3 text-center font-bold text-gray-900">
                       {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalPages, 0)}
-                    </td>
-                    <td className="p-3 text-center font-bold text-gray-900">
-                      {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalInserts, 0)}
                     </td>
                     <td className="p-3 text-center font-bold text-gray-900">
                       {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.assignments.length, 0)}
@@ -633,9 +681,9 @@ export function SupplierAssignmentsReport() {
 
         {/* Summary Footer */}
         {Object.keys(groupedBySupplier).length > 0 && (
-          <div className="mt-6 p-4 bg-gray-100 rounded-lg border border-gray-200">
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg border border-gray-200" style={{ pageBreakInside: 'avoid' }}>
             <h4 className="font-medium mb-2 text-gray-900">סיכום כללי</h4>
-            <div className="grid grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">סה״כ ספקים:</span>{" "}
                 <strong className="text-gray-900">{Object.keys(groupedBySupplier).length}</strong>
@@ -643,10 +691,6 @@ export function SupplierAssignmentsReport() {
               <div>
                 <span className="text-gray-600">סה״כ עמודים:</span>{" "}
                 <strong className="text-gray-900">{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalPages, 0)}</strong>
-              </div>
-              <div>
-                <span className="text-gray-600">סה״כ שילובים:</span>{" "}
-                <strong className="text-gray-900">{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalInserts, 0)}</strong>
               </div>
               <div>
                 <span className="text-gray-600">סה״כ סכום:</span>{" "}
