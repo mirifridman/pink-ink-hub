@@ -54,8 +54,8 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
       });
     }
 
-    // Split spreads into pages (3 columns x 8 rows = 24 spreads per A4 page)
-    const SPREADS_PER_PAGE = 24;
+    // Split spreads into pages (4 columns x 12 rows = 48 spreads per A4 page)
+    const SPREADS_PER_PAGE = 48;
     const pages: typeof spreads[] = [];
     for (let i = 0; i < spreads.length; i += SPREADS_PER_PAGE) {
       pages.push(spreads.slice(i, i + SPREADS_PER_PAGE));
@@ -74,7 +74,7 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
             item ? "text-white" : "text-gray-500"
           )}
           style={{ 
-            height: '48px',
+            height: '56px',
             borderColor: 'rgba(0,0,0,0.15)'
           }}
         >
@@ -190,20 +190,20 @@ export const FlatplanExportView = forwardRef<HTMLDivElement, FlatplanExportViewP
               </div>
             )}
 
-            {/* Spreads Grid - 3 columns x 8 rows */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Spreads Grid - 4 columns x 12 rows */}
+            <div className="grid grid-cols-4 gap-2">
               {pageSpreads.map((spread, idx) => (
                 <div 
                   key={idx} 
                   className="flex justify-center gap-px p-1 bg-gray-50 rounded border border-gray-200"
                 >
                   {/* Right page (lower number) on the right side */}
-                  <div className={cn("w-12", !spread.left && "mx-auto")}>
+                  <div className={cn("w-14", !spread.left && "mx-auto")}>
                     {renderPage(spread.right)}
                   </div>
                   {/* Left page (higher number) on the left side */}
                   {spread.left && (
-                    <div className="w-12">
+                    <div className="w-14">
                       {renderPage(spread.left)}
                     </div>
                   )}
