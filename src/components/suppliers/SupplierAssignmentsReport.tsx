@@ -428,43 +428,14 @@ export function SupplierAssignmentsReport() {
         ) : (
           <>
             {/* Detailed Report */}
-            <div data-report-detailed className="space-y-4">
-              {Object.entries(groupedBySupplier).map(([supplierId, data]) => (
-                <div key={supplierId} className="border rounded-lg p-4 bg-white">
-                  {/* Supplier Header */}
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                        {data.supplier_name.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{data.supplier_name}</h3>
-                        <span className="text-sm text-gray-600">
-                          {getSupplierTypeLabel(data.supplier_type)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-medium">
-                        {data.totalPages} עמודים
-                      </span>
-                      {data.totalInserts > 0 && (
-                        <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium">
-                          {data.totalInserts} שילובים
-                        </span>
-                      )}
-                      <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-bold">
-                        {formatCurrency(data.totalAmount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Assignments Table */}
+            <div data-report-detailed>
+              {selectedIssueId !== "all" ? (
+                /* Single table view when filtering by specific issue */
+                <div className="border rounded-lg bg-white overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="p-2 text-right font-medium text-gray-700">מגזין</th>
-                        <th className="p-2 text-right font-medium text-gray-700">גיליון</th>
+                        <th className="p-2 text-right font-medium text-gray-700">ספק</th>
                         <th className="p-2 text-right font-medium text-gray-700">תוכן</th>
                         <th className="p-2 text-right font-medium text-gray-700">עמודים</th>
                         <th className="p-2 text-right font-medium text-gray-700">סוג</th>
@@ -472,38 +443,140 @@ export function SupplierAssignmentsReport() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.assignments.map((assignment, idx) => (
-                        <tr key={idx} className="border-b last:border-0">
-                          <td className="p-2 text-gray-800">{assignment.magazine_name}</td>
-                          <td className="p-2 text-gray-800">
-                            #{assignment.issue_number} - {assignment.theme}
-                          </td>
-                          <td className="p-2 text-gray-800">{assignment.content}</td>
-                          <td className="p-2 text-gray-800">
-                            {assignment.type === 'lineup' 
-                              ? `${assignment.page_start}-${assignment.page_end}` 
-                              : '-'}
-                          </td>
-                          <td className="p-2">
-                            <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
-                              {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
-                            </span>
-                          </td>
-                          <td className="p-2 text-gray-800 font-medium">
-                            {assignment.amount > 0 ? formatCurrency(assignment.amount) : '-'}
-                          </td>
-                        </tr>
+                      {Object.entries(groupedBySupplier).map(([supplierId, data], supplierIdx, arr) => (
+                        <>
+                          {data.assignments.map((assignment, idx) => (
+                            <tr key={`${supplierId}-${idx}`} className="border-b border-gray-100">
+                              {idx === 0 ? (
+                                <td 
+                                  className="p-2 text-gray-900 font-medium align-top"
+                                  rowSpan={data.assignments.length}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+                                      {data.supplier_name.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div>{data.supplier_name}</div>
+                                      <div className="text-xs text-gray-500">{getSupplierTypeLabel(data.supplier_type)}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                              ) : null}
+                              <td className="p-2 text-gray-800">{assignment.content}</td>
+                              <td className="p-2 text-gray-800">
+                                {assignment.type === 'lineup' 
+                                  ? `${assignment.page_start}-${assignment.page_end}` 
+                                  : '-'}
+                              </td>
+                              <td className="p-2">
+                                <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
+                                  {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
+                                </span>
+                              </td>
+                              <td className="p-2 text-gray-800 font-medium">
+                                {assignment.amount > 0 ? formatCurrency(assignment.amount) : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Supplier subtotal row */}
+                          <tr className="bg-gray-50 border-b-2 border-gray-300">
+                            <td colSpan={4} className="p-2 text-right text-gray-700 font-medium">
+                              סה״כ {data.supplier_name}: {data.totalPages} עמודים, {data.totalInserts} שילובים
+                            </td>
+                            <td className="p-2 text-green-700 font-bold">{formatCurrency(data.totalAmount)}</td>
+                          </tr>
+                        </>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="bg-gray-50 font-bold">
-                        <td colSpan={5} className="p-2 text-right text-gray-700">סה״כ לספק:</td>
-                        <td className="p-2 text-green-700">{formatCurrency(data.totalAmount)}</td>
+                      <tr className="bg-gray-100 border-t-2 border-gray-400">
+                        <td colSpan={4} className="p-3 text-right text-gray-900 font-bold">סה״כ כללי:</td>
+                        <td className="p-3 text-green-700 font-bold text-lg">{formatCurrency(grandTotalAmount)}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-              ))}
+              ) : (
+                /* Separate boxes view when showing all issues */
+                <div className="space-y-4">
+                  {Object.entries(groupedBySupplier).map(([supplierId, data]) => (
+                    <div key={supplierId} className="border rounded-lg p-4 bg-white">
+                      {/* Supplier Header */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+                            {data.supplier_name.charAt(0)}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg text-gray-900">{data.supplier_name}</h3>
+                            <span className="text-sm text-gray-600">
+                              {getSupplierTypeLabel(data.supplier_type)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-medium">
+                            {data.totalPages} עמודים
+                          </span>
+                          {data.totalInserts > 0 && (
+                            <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium">
+                              {data.totalInserts} שילובים
+                            </span>
+                          )}
+                          <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-bold">
+                            {formatCurrency(data.totalAmount)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Assignments Table */}
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="p-2 text-right font-medium text-gray-700">מגזין</th>
+                            <th className="p-2 text-right font-medium text-gray-700">גיליון</th>
+                            <th className="p-2 text-right font-medium text-gray-700">תוכן</th>
+                            <th className="p-2 text-right font-medium text-gray-700">עמודים</th>
+                            <th className="p-2 text-right font-medium text-gray-700">סוג</th>
+                            <th className="p-2 text-right font-medium text-gray-700">סכום</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.assignments.map((assignment, idx) => (
+                            <tr key={idx} className="border-b last:border-0">
+                              <td className="p-2 text-gray-800">{assignment.magazine_name}</td>
+                              <td className="p-2 text-gray-800">
+                                #{assignment.issue_number} - {assignment.theme}
+                              </td>
+                              <td className="p-2 text-gray-800">{assignment.content}</td>
+                              <td className="p-2 text-gray-800">
+                                {assignment.type === 'lineup' 
+                                  ? `${assignment.page_start}-${assignment.page_end}` 
+                                  : '-'}
+                              </td>
+                              <td className="p-2">
+                                <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
+                                  {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
+                                </span>
+                              </td>
+                              <td className="p-2 text-gray-800 font-medium">
+                                {assignment.amount > 0 ? formatCurrency(assignment.amount) : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-gray-50 font-bold">
+                            <td colSpan={5} className="p-2 text-right text-gray-700">סה״כ לספק:</td>
+                            <td className="p-2 text-green-700">{formatCurrency(data.totalAmount)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Summary Report - for summary PDF export */}
