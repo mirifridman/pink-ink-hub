@@ -14,6 +14,7 @@ interface EditableTextFieldProps {
   placeholder?: string;
   onUpdate?: () => void;
   className?: string;
+  lightTheme?: boolean;
 }
 
 export function EditableTextField({
@@ -23,6 +24,7 @@ export function EditableTextField({
   placeholder,
   onUpdate,
   className,
+  lightTheme,
 }: EditableTextFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
@@ -82,7 +84,12 @@ export function EditableTextField({
 
   if (!canEdit) {
     return (
-      <span className={cn("text-sm", !value && "text-muted-foreground", className)}>
+      <span className={cn(
+        "text-sm", 
+        !value && (lightTheme ? "text-gray-400" : "text-muted-foreground"), 
+        lightTheme && "text-gray-700",
+        className
+      )}>
         {value || placeholder || "—"}
       </span>
     );
@@ -96,7 +103,10 @@ export function EditableTextField({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
-          className="h-8 text-sm"
+          className={cn(
+            "h-8 text-sm",
+            lightTheme && "bg-white border-gray-300 text-gray-800 focus:border-pink-500"
+          )}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
           disabled={isUpdating}
@@ -127,8 +137,9 @@ export function EditableTextField({
     <div
       onClick={() => setIsEditing(true)}
       className={cn(
-        "cursor-pointer hover:bg-muted/50 p-1 rounded min-h-[28px] flex items-center transition-colors",
-        !value && "text-muted-foreground",
+        "cursor-pointer p-1 rounded min-h-[28px] flex items-center transition-colors",
+        lightTheme ? "hover:bg-gray-100 text-gray-800" : "hover:bg-muted/50",
+        !value && (lightTheme ? "text-gray-400" : "text-muted-foreground"),
         className
       )}
       title="לחץ לעריכה"
