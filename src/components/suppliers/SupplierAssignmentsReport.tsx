@@ -32,9 +32,12 @@ interface SupplierAssignment {
   type: 'lineup' | 'insert';
 }
 
+type ReportType = "detailed" | "summary";
+
 export function SupplierAssignmentsReport() {
   const [selectedIssueId, setSelectedIssueId] = useState<string>("all");
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("all");
+  const [reportType, setReportType] = useState<ReportType>("detailed");
   const reportRef = useRef<HTMLDivElement>(null);
   
   const { data: issues } = useIssues();
@@ -147,19 +150,63 @@ export function SupplierAssignmentsReport() {
     return acc;
   }, {} as Record<string, { supplier_name: string; supplier_type: string | null; assignments: SupplierAssignment[]; totalPages: number; totalInserts: number }>);
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = async (exportType: ReportType) => {
     if (!reportRef.current) return;
     
     try {
+      // Clone the report element for PDF export
+      const clonedReport = reportRef.current.cloneNode(true) as HTMLElement;
+      
+      // Apply light theme styles for PDF
+      clonedReport.style.backgroundColor = '#ffffff';
+      clonedReport.style.color = '#1a1a1a';
+      
+      // Apply light theme to all elements
+      clonedReport.querySelectorAll('*').forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.backgroundColor = htmlEl.style.backgroundColor?.includes('muted') ? '#f5f5f5' : '';
+        htmlEl.style.color = htmlEl.style.color || '#1a1a1a';
+      });
+
+      // If summary report, hide detailed tables
+      if (exportType === "summary") {
+        clonedReport.querySelectorAll('[data-report-detailed]').forEach((el) => {
+          (el as HTMLElement).style.display = 'none';
+        });
+        clonedReport.querySelectorAll('[data-report-summary]').forEach((el) => {
+          (el as HTMLElement).style.display = 'block';
+        });
+      }
+
+      // Create a temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.backgroundColor = '#ffffff';
+      tempContainer.appendChild(clonedReport);
+      document.body.appendChild(tempContainer);
+      
+      const filename = exportType === "summary" 
+        ? `supplier-summary-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`
+        : `supplier-assignments-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+
       const opt = {
         margin: 10,
-        filename: `supplier-assignments-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`,
+        filename,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+        html2canvas: { 
+          scale: 2, 
+          backgroundColor: '#ffffff',
+          useCORS: true,
+        },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
       };
       
-      await html2pdf().set(opt).from(reportRef.current).save();
+      await html2pdf().set(opt).from(clonedReport).save();
+      
+      // Cleanup
+      document.body.removeChild(tempContainer);
+      
       toast.success('הדו״ח יוצא ל-PDF בהצלחה!');
     } catch (error) {
       toast.error('שגיאה בייצוא ה-PDF');
@@ -225,51 +272,57 @@ export function SupplierAssignmentsReport() {
           </Select>
         </div>
 
-        <Button variant="outline" onClick={handleExportPdf} className="mr-auto">
-          <Download className="w-4 h-4 ml-2" />
-          ייצוא ל-PDF
-        </Button>
+        <div className="flex items-center gap-2 mr-auto">
+          <Button variant="outline" onClick={() => handleExportPdf("detailed")}>
+            <Download className="w-4 h-4 ml-2" />
+            ייצוא מפורט
+          </Button>
+          <Button variant="outline" onClick={() => handleExportPdf("summary")}>
+            <FileText className="w-4 h-4 ml-2" />
+            ייצוא סיכום
+          </Button>
+        </div>
       </div>
 
       {/* Report Content */}
-      <div ref={reportRef} className="bg-background p-4">
-        <div className="mb-6 text-center print:block hidden">
-          <h2 className="text-xl font-bold">דו״ח הקצאות ספקים</h2>
-          <p className="text-sm text-muted-foreground">{format(new Date(), "dd/MM/yyyy", { locale: he })}</p>
+      <div ref={reportRef} className="bg-white text-gray-900 p-6 rounded-lg">
+        {/* Report Header - always visible in PDF */}
+        <div className="mb-6 text-center border-b pb-4">
+          <h2 className="text-xl font-bold text-gray-900">דו״ח הקצאות ספקים</h2>
+          <p className="text-sm text-gray-600">{format(new Date(), "dd/MM/yyyy", { locale: he })}</p>
         </div>
 
         {Object.keys(groupedBySupplier).length === 0 ? (
-          <NeonCard>
-            <NeonCardContent className="p-8 text-center text-muted-foreground">
-              אין הקצאות להצגה
-            </NeonCardContent>
-          </NeonCard>
+          <div className="p-8 text-center text-gray-500 border rounded-lg">
+            אין הקצאות להצגה
+          </div>
         ) : (
-          <div className="space-y-4">
-            {Object.entries(groupedBySupplier).map(([supplierId, data]) => (
-              <NeonCard key={supplierId}>
-                <NeonCardContent className="p-4">
+          <>
+            {/* Detailed Report */}
+            <div data-report-detailed className="space-y-4">
+              {Object.entries(groupedBySupplier).map(([supplierId, data]) => (
+                <div key={supplierId} className="border rounded-lg p-4 bg-white">
                   {/* Supplier Header */}
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
                         {data.supplier_name.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg">{data.supplier_name}</h3>
-                        <span className="text-sm text-muted-foreground">
+                        <h3 className="font-bold text-lg text-gray-900">{data.supplier_name}</h3>
+                        <span className="text-sm text-gray-600">
                           {getSupplierTypeLabel(data.supplier_type)}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Badge variant="secondary" className="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+                      <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-medium">
                         {data.totalPages} עמודים
-                      </Badge>
+                      </span>
                       {data.totalInserts > 0 && (
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                        <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium">
                           {data.totalInserts} שילובים
-                        </Badge>
+                        </span>
                       )}
                     </div>
                   </div>
@@ -277,58 +330,99 @@ export function SupplierAssignmentsReport() {
                   {/* Assignments Table */}
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/30">
-                        <th className="p-2 text-right font-medium">מגזין</th>
-                        <th className="p-2 text-right font-medium">גיליון</th>
-                        <th className="p-2 text-right font-medium">תוכן</th>
-                        <th className="p-2 text-right font-medium">עמודים</th>
-                        <th className="p-2 text-right font-medium">סוג</th>
+                      <tr className="border-b bg-gray-50">
+                        <th className="p-2 text-right font-medium text-gray-700">מגזין</th>
+                        <th className="p-2 text-right font-medium text-gray-700">גיליון</th>
+                        <th className="p-2 text-right font-medium text-gray-700">תוכן</th>
+                        <th className="p-2 text-right font-medium text-gray-700">עמודים</th>
+                        <th className="p-2 text-right font-medium text-gray-700">סוג</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.assignments.map((assignment, idx) => (
-                        <tr key={idx} className="border-b last:border-0 hover:bg-muted/20">
-                          <td className="p-2">{assignment.magazine_name}</td>
-                          <td className="p-2">
+                        <tr key={idx} className="border-b last:border-0">
+                          <td className="p-2 text-gray-800">{assignment.magazine_name}</td>
+                          <td className="p-2 text-gray-800">
                             #{assignment.issue_number} - {assignment.theme}
                           </td>
-                          <td className="p-2">{assignment.content}</td>
-                          <td className="p-2">
+                          <td className="p-2 text-gray-800">{assignment.content}</td>
+                          <td className="p-2 text-gray-800">
                             {assignment.type === 'lineup' 
                               ? `${assignment.page_start}-${assignment.page_end}` 
                               : '-'}
                           </td>
                           <td className="p-2">
-                            <Badge variant="outline" className="text-xs">
+                            <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
                               {assignment.type === 'lineup' ? 'מדור' : 'שילוב'}
-                            </Badge>
+                            </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </NeonCardContent>
-              </NeonCard>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary Report - for summary PDF export */}
+            <div data-report-summary className="hidden">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="p-3 text-right font-bold text-gray-800">ספק</th>
+                    <th className="p-3 text-right font-bold text-gray-800">סוג</th>
+                    <th className="p-3 text-center font-bold text-gray-800">עמודים</th>
+                    <th className="p-3 text-center font-bold text-gray-800">שילובים</th>
+                    <th className="p-3 text-center font-bold text-gray-800">סה״כ פריטים</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(groupedBySupplier).map(([supplierId, data]) => (
+                    <tr key={supplierId} className="border-b border-gray-200">
+                      <td className="p-3 text-gray-800 font-medium">{data.supplier_name}</td>
+                      <td className="p-3 text-gray-600">{getSupplierTypeLabel(data.supplier_type)}</td>
+                      <td className="p-3 text-center text-gray-800">{data.totalPages}</td>
+                      <td className="p-3 text-center text-gray-800">{data.totalInserts}</td>
+                      <td className="p-3 text-center font-bold text-gray-900">{data.assignments.length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-100 border-t-2 border-gray-300">
+                    <td className="p-3 font-bold text-gray-900">סה״כ</td>
+                    <td className="p-3 text-gray-600">{Object.keys(groupedBySupplier).length} ספקים</td>
+                    <td className="p-3 text-center font-bold text-gray-900">
+                      {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalPages, 0)}
+                    </td>
+                    <td className="p-3 text-center font-bold text-gray-900">
+                      {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalInserts, 0)}
+                    </td>
+                    <td className="p-3 text-center font-bold text-gray-900">
+                      {Object.values(groupedBySupplier).reduce((sum, d) => sum + d.assignments.length, 0)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
         )}
 
-        {/* Summary */}
+        {/* Summary Footer */}
         {Object.keys(groupedBySupplier).length > 0 && (
-          <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-            <h4 className="font-medium mb-2">סיכום</h4>
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg border border-gray-200">
+            <h4 className="font-medium mb-2 text-gray-900">סיכום</h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">סה״כ ספקים:</span>{" "}
-                <strong>{Object.keys(groupedBySupplier).length}</strong>
+                <span className="text-gray-600">סה״כ ספקים:</span>{" "}
+                <strong className="text-gray-900">{Object.keys(groupedBySupplier).length}</strong>
               </div>
               <div>
-                <span className="text-muted-foreground">סה״כ עמודים:</span>{" "}
-                <strong>{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalPages, 0)}</strong>
+                <span className="text-gray-600">סה״כ עמודים:</span>{" "}
+                <strong className="text-gray-900">{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalPages, 0)}</strong>
               </div>
               <div>
-                <span className="text-muted-foreground">סה״כ שילובים:</span>{" "}
-                <strong>{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalInserts, 0)}</strong>
+                <span className="text-gray-600">סה״כ שילובים:</span>{" "}
+                <strong className="text-gray-900">{Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalInserts, 0)}</strong>
               </div>
             </div>
           </div>
