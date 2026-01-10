@@ -172,17 +172,20 @@ export function DesktopSidebar() {
 
       {/* User */}
       <div className="flex flex-col gap-3 pt-4 border-t border-sidebar-border mt-auto">
-        <div className="flex items-center gap-3 px-3">
+        <button
+          onClick={() => navigate("/profile")}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-accent transition-all duration-200 cursor-pointer"
+        >
           <div className={`min-w-[40px] h-10 bg-gradient-to-br ${role ? roleColors[role] : "from-pink-500 to-purple-500"} rounded-xl flex items-center justify-center font-semibold text-base text-white`}>
             {getInitials()}
           </div>
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden text-right">
             <div className="font-medium text-sm text-foreground truncate">{getUserDisplayName()}</div>
             <div className="text-[11px] text-muted-foreground">
               {role ? roleLabels[role] : "משתמש"}
             </div>
           </div>
-        </div>
+        </button>
         
         {/* Logout button - visible on hover */}
         <button
