@@ -297,7 +297,7 @@ export default function Suppliers() {
             {canViewAssignments && (
               <TabsTrigger value="assignments" className="gap-2">
                 <ClipboardList className="w-4 h-4" />
-                דו״ח הקצאות
+                הפקת דו״חות
               </TabsTrigger>
             )}
           </TabsList>
