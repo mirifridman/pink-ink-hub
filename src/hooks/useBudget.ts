@@ -126,16 +126,19 @@ export function useImportLineupToBudget() {
   return useMutation({
     mutationFn: async ({ issueId, userId }: { issueId: string; userId: string }) => {
       // Fetch lineup items that don't have budget entries yet
+      // Exclude items with content_type "מודעה" (advertisements)
       const { data: lineupItems, error: lineupError } = await supabase
         .from("lineup_items")
         .select(`
           id,
           content,
+          content_type,
           page_start,
           page_end,
           supplier_id
         `)
-        .eq("issue_id", issueId);
+        .eq("issue_id", issueId)
+        .or('content_type.is.null,content_type.neq.מודעה');
       
       if (lineupError) throw lineupError;
 
