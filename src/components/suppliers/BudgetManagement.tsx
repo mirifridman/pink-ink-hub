@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Plus, Import, Trash2, Edit2, Loader2, DollarSign } from "lucide-react";
+import { Download, Plus, Import, Trash2, Edit2, Loader2, DollarSign, Settings } from "lucide-react";
 import { useIssues, useSuppliers } from "@/hooks/useIssues";
 import { useBudgetItems, useCreateBudgetItem, useUpdateBudgetItem, useDeleteBudgetItem, useImportLineupToBudget } from "@/hooks/useBudget";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,12 +38,21 @@ export function BudgetManagement() {
   const [selectedIssueId, setSelectedIssueId] = useState<string>("all");
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSystemExpenseDialogOpen, setIsSystemExpenseDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState({
     issue_id: "",
     supplier_id: "",
     description: "",
     page_count: 0,
+    amount: 0,
+    notes: "",
+    is_system_expense: false,
+  });
+  const [systemExpenseData, setSystemExpenseData] = useState({
+    issue_id: "",
+    supplier_id: "",
+    description: "",
     amount: 0,
     notes: "",
   });
@@ -110,8 +119,19 @@ export function BudgetManagement() {
       page_count: 0,
       amount: 0,
       notes: "",
+      is_system_expense: false,
     });
     setEditingItem(null);
+  };
+
+  const resetSystemExpenseForm = () => {
+    setSystemExpenseData({
+      issue_id: "",
+      supplier_id: "",
+      description: "",
+      amount: 0,
+      notes: "",
+    });
   };
 
   const handleOpenAdd = () => {
@@ -128,8 +148,20 @@ export function BudgetManagement() {
       page_count: item.page_count || 0,
       amount: Number(item.amount) || 0,
       notes: item.notes || "",
+      is_system_expense: item.is_system_expense || false,
     });
-    setIsAddDialogOpen(true);
+    if (item.is_system_expense) {
+      setSystemExpenseData({
+        issue_id: item.issue_id,
+        supplier_id: item.supplier_id || "",
+        description: item.description,
+        amount: Number(item.amount) || 0,
+        notes: item.notes || "",
+      });
+      setIsSystemExpenseDialogOpen(true);
+    } else {
+      setIsAddDialogOpen(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,6 +192,7 @@ export function BudgetManagement() {
         page_count: formData.page_count,
         amount: formData.amount,
         notes: formData.notes || null,
+        is_system_expense: false,
         created_by: user.id,
       });
     }
@@ -177,6 +210,45 @@ export function BudgetManagement() {
   const handleImportFromIssue = async (issueId: string) => {
     if (!user) return;
     await importLineup.mutateAsync({ issueId, userId: user.id });
+  };
+
+  const handleSystemExpenseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    
+    if (!systemExpenseData.issue_id || !systemExpenseData.description) {
+      toast.error("נא למלא גיליון ותיאור");
+      return;
+    }
+
+    if (editingItem && editingItem.is_system_expense) {
+      await updateBudgetItem.mutateAsync({
+        id: editingItem.id,
+        supplier_id: systemExpenseData.supplier_id || null,
+        description: systemExpenseData.description,
+        page_count: 0,
+        amount: systemExpenseData.amount,
+        notes: systemExpenseData.notes || null,
+        is_system_expense: true,
+      });
+    } else {
+      await createBudgetItem.mutateAsync({
+        issue_id: systemExpenseData.issue_id,
+        supplier_id: systemExpenseData.supplier_id || null,
+        lineup_item_id: null,
+        insert_id: null,
+        description: systemExpenseData.description,
+        page_count: 0,
+        amount: systemExpenseData.amount,
+        notes: systemExpenseData.notes || null,
+        is_system_expense: true,
+        created_by: user.id,
+      });
+    }
+
+    setIsSystemExpenseDialogOpen(false);
+    resetSystemExpenseForm();
+    setEditingItem(null);
   };
 
   const handleExportPdf = async () => {
@@ -365,6 +437,111 @@ export function BudgetManagement() {
             </DialogContent>
           </Dialog>
           
+          {/* System Expense Dialog */}
+          <Dialog open={isSystemExpenseDialogOpen} onOpenChange={(open) => {
+            setIsSystemExpenseDialogOpen(open);
+            if (!open) {
+              resetSystemExpenseForm();
+              setEditingItem(null);
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" onClick={() => {
+                resetSystemExpenseForm();
+                setEditingItem(null);
+              }}>
+                <Settings className="w-4 h-4 ml-2" />
+                הוסף הוצאה מערכתית
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editingItem?.is_system_expense ? "עריכת הוצאה מערכתית" : "הוספת הוצאה מערכתית"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSystemExpenseSubmit} className="space-y-4">
+                <div className="grid gap-4">
+                  <div>
+                    <label className="text-sm font-medium">גיליון *</label>
+                    <Select
+                      value={systemExpenseData.issue_id}
+                      onValueChange={(v) => setSystemExpenseData({ ...systemExpenseData, issue_id: v })}
+                      disabled={!!editingItem}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר גיליון" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {issues?.map((issue) => (
+                          <SelectItem key={issue.id} value={issue.id}>
+                            {issue.magazine?.name} - גיליון {issue.issue_number}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">ספק</label>
+                    <Select
+                      value={systemExpenseData.supplier_id || "none"}
+                      onValueChange={(v) => setSystemExpenseData({ ...systemExpenseData, supplier_id: v === "none" ? "" : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר ספק" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">ללא ספק</SelectItem>
+                        {suppliers?.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">תיאור ההוצאה *</label>
+                    <Input
+                      value={systemExpenseData.description}
+                      onChange={(e) => setSystemExpenseData({ ...systemExpenseData, description: e.target.value })}
+                      placeholder="לדוגמה: הגהה לשונית, תרגום, ועדה רוחנית"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">עלות (₪)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={systemExpenseData.amount}
+                      onChange={(e) => setSystemExpenseData({ ...systemExpenseData, amount: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">הערות</label>
+                    <Input
+                      value={systemExpenseData.notes}
+                      onChange={(e) => setSystemExpenseData({ ...systemExpenseData, notes: e.target.value })}
+                      placeholder="הערות (אופציונלי)"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsSystemExpenseDialogOpen(false)}>
+                    ביטול
+                  </Button>
+                  <Button type="submit" disabled={createBudgetItem.isPending || updateBudgetItem.isPending}>
+                    {editingItem?.is_system_expense ? "עדכן" : "הוסף"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+          
           <Button variant="outline" onClick={handleExportPdf}>
             <Download className="w-4 h-4 ml-2" />
             ייצוא PDF
@@ -456,6 +633,11 @@ export function BudgetManagement() {
                           )}
                           {item.insert_id && (
                             <Badge variant="outline" className="text-xs">שילוב</Badge>
+                          )}
+                          {item.is_system_expense && (
+                            <Badge variant="secondary" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20">
+                              הוצאות מערכת
+                            </Badge>
                           )}
                         </div>
                       </TableCell>

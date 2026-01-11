@@ -66,6 +66,9 @@ const supplierTypes = [
   { value: "editor", label: "עורכ/ת", icon: FileText },
   { value: "sub_editor", label: "עורכ/ת משנה", icon: FileText },
   { value: "designer", label: "מעצב/ת", icon: Palette },
+  { value: "proofreader", label: "הגהה לשונית", icon: FileText },
+  { value: "translator", label: "תרגום", icon: FileText },
+  { value: "spiritual_committee", label: "ועדה רוחנית", icon: Users },
   { value: "other", label: "אחר", icon: Users },
 ];
 
