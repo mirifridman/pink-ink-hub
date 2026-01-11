@@ -22,6 +22,7 @@ export type Database = {
           description: string
           id: string
           insert_id: string | null
+          is_system_expense: boolean
           issue_id: string
           lineup_item_id: string | null
           notes: string | null
@@ -36,6 +37,7 @@ export type Database = {
           description: string
           id?: string
           insert_id?: string | null
+          is_system_expense?: boolean
           issue_id: string
           lineup_item_id?: string | null
           notes?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           description?: string
           id?: string
           insert_id?: string | null
+          is_system_expense?: boolean
           issue_id?: string
           lineup_item_id?: string | null
           notes?: string | null

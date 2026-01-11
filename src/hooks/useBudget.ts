@@ -12,6 +12,7 @@ export interface BudgetItem {
   page_count: number;
   amount: number;
   notes: string | null;
+  is_system_expense: boolean;
   created_at: string;
   updated_at: string;
   created_by: string;
