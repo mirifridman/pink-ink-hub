@@ -628,6 +628,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          device_type: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          device_type?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          device_type?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reminder_settings: {
         Row: {
           created_at: string
@@ -925,6 +958,7 @@ export type Database = {
           created_at: string | null
           email_notifications: boolean | null
           id: string
+          push_notifications_enabled: boolean | null
           remember_me: boolean | null
           theme: string | null
           updated_at: string | null
@@ -935,6 +969,7 @@ export type Database = {
           created_at?: string | null
           email_notifications?: boolean | null
           id?: string
+          push_notifications_enabled?: boolean | null
           remember_me?: boolean | null
           theme?: string | null
           updated_at?: string | null
@@ -945,6 +980,7 @@ export type Database = {
           created_at?: string | null
           email_notifications?: boolean | null
           id?: string
+          push_notifications_enabled?: boolean | null
           remember_me?: boolean | null
           theme?: string | null
           updated_at?: string | null
