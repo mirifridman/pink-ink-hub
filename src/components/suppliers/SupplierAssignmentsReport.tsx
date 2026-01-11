@@ -31,12 +31,14 @@ interface SupplierAssignment {
   content: string;
   page_start: number;
   page_end: number;
-  type: 'lineup' | 'insert';
+  type: 'lineup' | 'insert' | 'system_expense';
   lineup_item_id?: string;
   insert_id?: string;
+  budget_item_id?: string;
   created_at: string;
   amount: number;
   content_type: string | null;
+  is_system_expense?: boolean;
 }
 
 type ReportType = "detailed" | "summary";
@@ -91,23 +93,30 @@ export function SupplierAssignmentsReport() {
 
       if (insertsError) throw insertsError;
 
-      // Fetch budget items
+      // Fetch budget items (including system expenses)
       const { data: budgetItems, error: budgetError } = await supabase
         .from('budget_items')
-        .select('*');
+        .select(`
+          *,
+          suppliers (id, name, supplier_type),
+          issues (id, issue_number, theme, magazine_id, magazines (name))
+        `);
 
       if (budgetError) throw budgetError;
 
       // Create maps for budget lookup
       const lineupBudgetMap = new Map<string, number>();
       const insertBudgetMap = new Map<string, number>();
+      const systemExpenses: any[] = [];
       
       budgetItems?.forEach((item: any) => {
-        if (item.lineup_item_id) {
+        if (item.is_system_expense) {
+          // Collect system expenses separately
+          systemExpenses.push(item);
+        } else if (item.lineup_item_id) {
           const current = lineupBudgetMap.get(item.lineup_item_id) || 0;
           lineupBudgetMap.set(item.lineup_item_id, current + Number(item.amount));
-        }
-        if (item.insert_id) {
+        } else if (item.insert_id) {
           const current = insertBudgetMap.get(item.insert_id) || 0;
           insertBudgetMap.set(item.insert_id, current + Number(item.amount));
         }
@@ -161,6 +170,30 @@ export function SupplierAssignmentsReport() {
         }
       });
 
+      // Process system expenses
+      systemExpenses.forEach((item: any) => {
+        if (item.suppliers && item.issues) {
+          allAssignments.push({
+            supplier_id: item.supplier_id,
+            supplier_name: item.suppliers.name,
+            supplier_type: item.suppliers.supplier_type,
+            issue_id: item.issue_id,
+            issue_number: item.issues.issue_number,
+            magazine_name: item.issues.magazines?.name || '',
+            theme: item.issues.theme,
+            content: item.description,
+            page_start: 0,
+            page_end: 0,
+            type: 'system_expense',
+            budget_item_id: item.id,
+            created_at: item.created_at,
+            amount: Number(item.amount),
+            content_type: null,
+            is_system_expense: true,
+          });
+        }
+      });
+
       return allAssignments;
     },
   });
@@ -198,6 +231,7 @@ export function SupplierAssignmentsReport() {
         assignments: [],
         totalPages: 0,
         totalInserts: 0,
+        totalSystemExpenses: 0,
         totalAmount: 0,
       };
     }
@@ -205,11 +239,13 @@ export function SupplierAssignmentsReport() {
     acc[assignment.supplier_id].totalAmount += assignment.amount;
     if (assignment.type === 'lineup') {
       acc[assignment.supplier_id].totalPages += (assignment.page_end - assignment.page_start + 1);
-    } else {
+    } else if (assignment.type === 'insert') {
       acc[assignment.supplier_id].totalInserts += 1;
+    } else if (assignment.type === 'system_expense') {
+      acc[assignment.supplier_id].totalSystemExpenses += 1;
     }
     return acc;
-  }, {} as Record<string, { supplier_name: string; supplier_type: string | null; assignments: SupplierAssignment[]; totalPages: number; totalInserts: number; totalAmount: number }>);
+  }, {} as Record<string, { supplier_name: string; supplier_type: string | null; assignments: SupplierAssignment[]; totalPages: number; totalInserts: number; totalSystemExpenses: number; totalAmount: number }>);
 
   const grandTotalAmount = Object.values(groupedBySupplier).reduce((sum, d) => sum + d.totalAmount, 0);
 
@@ -289,7 +325,7 @@ export function SupplierAssignmentsReport() {
           getSupplierTypeLabel(data.supplier_type),
           assignment.content,
           assignment.type === 'lineup' ? `${assignment.page_start}-${assignment.page_end}` : '-',
-          assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-'),
+          assignment.is_system_expense ? 'הוצאה מערכתית' : (assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-')),
           assignment.amount > 0 ? assignment.amount.toString() : '0'
         ]);
       });
@@ -331,9 +367,25 @@ export function SupplierAssignmentsReport() {
       editor: "עורכ/ת",
       sub_editor: "עורכ/ת משנה",
       designer: "מעצב/ת",
+      proofreader: "הגהה לשונית",
+      translator: "תרגום",
+      spiritual_committee: "ועדה רוחנית",
       other: "אחר",
     };
     return types[type || ''] || "אחר";
+  };
+
+  const getTypeLabel = (assignment: SupplierAssignment) => {
+    if (assignment.is_system_expense) {
+      return 'הוצאה מערכתית';
+    }
+    if (assignment.content_type) {
+      return getContentTypeLabel(assignment.content_type);
+    }
+    if (assignment.type === 'insert') {
+      return 'שילוב';
+    }
+    return '-';
   };
 
   const clearDateFilters = () => {
@@ -466,7 +518,7 @@ export function SupplierAssignmentsReport() {
       <div ref={reportRef} dir="rtl" className="bg-white text-gray-900 p-6 rounded-lg">
         {/* Report Header */}
         <div className="mb-6 text-center border-b pb-4">
-          <h2 className="text-xl font-bold text-gray-900">דו״ח הקצאות ספקים</h2>
+          <h2 className="text-xl font-bold text-gray-900">דו״ח הוצאות ספקים</h2>
           <p className="text-sm text-gray-600">{format(new Date(), "dd/MM/yyyy", { locale: he })}</p>
           {(dateFrom || dateTo) && (
             <p className="text-sm text-gray-500 mt-1">
@@ -529,8 +581,13 @@ export function SupplierAssignmentsReport() {
                                   : '-'}
                               </td>
                               <td className="p-2">
-                                <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
-                                  {assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-')}
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded border text-xs",
+                                  assignment.is_system_expense 
+                                    ? "border-orange-300 bg-orange-50 text-orange-700"
+                                    : "border-gray-300 text-gray-700"
+                                )}>
+                                  {getTypeLabel(assignment)}
                                 </span>
                               </td>
                               <td className="p-2 text-gray-800 font-medium">
@@ -542,6 +599,7 @@ export function SupplierAssignmentsReport() {
                           <tr className="bg-gray-50 border-b-2 border-gray-300">
                             <td colSpan={4} className="p-2 text-right text-gray-700 font-medium">
                               סה״כ {data.supplier_name}: {data.totalPages} עמודים, {data.totalInserts} שילובים
+                              {data.totalSystemExpenses > 0 && `, ${data.totalSystemExpenses} הוצאות מערכתיות`}
                             </td>
                             <td className="p-2 text-green-700 font-bold">{formatCurrency(data.totalAmount)}</td>
                           </tr>
@@ -583,6 +641,11 @@ export function SupplierAssignmentsReport() {
                               {data.totalInserts} שילובים
                             </span>
                           )}
+                          {data.totalSystemExpenses > 0 && (
+                            <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-medium">
+                              {data.totalSystemExpenses} הוצאות מערכתיות
+                            </span>
+                          )}
                           <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-bold">
                             {formatCurrency(data.totalAmount)}
                           </span>
@@ -615,8 +678,13 @@ export function SupplierAssignmentsReport() {
                                   : '-'}
                               </td>
                               <td className="p-2">
-                                <span className="px-2 py-0.5 rounded border border-gray-300 text-xs text-gray-700">
-                                  {assignment.content_type ? getContentTypeLabel(assignment.content_type) : (assignment.type === 'insert' ? 'שילוב' : '-')}
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded border text-xs",
+                                  assignment.is_system_expense 
+                                    ? "border-orange-300 bg-orange-50 text-orange-700"
+                                    : "border-gray-300 text-gray-700"
+                                )}>
+                                  {getTypeLabel(assignment)}
                                 </span>
                               </td>
                               <td className="p-2 text-gray-800 font-medium">
