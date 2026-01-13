@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   useMagazines, 
   useCreateMagazine, 
@@ -11,7 +12,7 @@ import {
   useCreatePageTemplate,
   useDeletePageTemplate,
 } from "@/hooks/useIssues";
-import { Plus, Trash2, BookOpen, FileText } from "lucide-react";
+import { Plus, Trash2, BookOpen, FileText, Mail, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -24,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { EmailTemplatesSettings } from "@/components/settings/EmailTemplatesSettings";
 
 export default function Settings() {
   const [newMagazineName, setNewMagazineName] = useState("");
@@ -95,147 +97,171 @@ export default function Settings() {
     <AppLayout>
       <div className="space-y-6" dir="rtl">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">הגדרות מערכת</h1>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <SettingsIcon className="w-7 h-7" />
+            הגדרות מערכת
+          </h1>
           <p className="text-muted-foreground">ניהול הגדרות כלליות של המערכת</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Magazines Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                ניהול מותגים
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="שם המותג החדש"
-                  value={newMagazineName}
-                  onChange={(e) => setNewMagazineName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddMagazine()}
-                  className="flex-1"
-                />
-                <Button onClick={handleAddMagazine} disabled={createMagazine.isPending}>
-                  <Plus className="w-4 h-4 ml-2" />
-                  הוסף
-                </Button>
-              </div>
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="general" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              הגדרות כלליות
+            </TabsTrigger>
+            <TabsTrigger value="emails" className="gap-2">
+              <Mail className="w-4 h-4" />
+              תבניות מיילים
+            </TabsTrigger>
+          </TabsList>
 
-              {isLoadingMagazines ? (
-                <p className="text-muted-foreground text-sm">טוען...</p>
-              ) : magazines?.length === 0 ? (
-                <p className="text-muted-foreground text-sm">אין מותגים במערכת</p>
-              ) : (
-                <div className="space-y-2">
-                  {magazines?.map((magazine) => (
-                    <div
-                      key={magazine.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                    >
-                      <span className="font-medium">{magazine.name}</span>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>מחיקת מותג</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              האם אתה בטוח שברצונך למחוק את המותג "{magazine.name}"?
-                              פעולה זו לא ניתנת לביטול.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex-row-reverse gap-2">
-                            <AlertDialogCancel>ביטול</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteMagazine(magazine.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              מחק
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+          {/* General Settings Tab */}
+          <TabsContent value="general" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Magazines Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5" />
+                    ניהול מותגים
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="שם המותג החדש"
+                      value={newMagazineName}
+                      onChange={(e) => setNewMagazineName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddMagazine()}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleAddMagazine} disabled={createMagazine.isPending}>
+                      <Plus className="w-4 h-4 ml-2" />
+                      הוסף
+                    </Button>
+                  </div>
+
+                  {isLoadingMagazines ? (
+                    <p className="text-muted-foreground text-sm">טוען...</p>
+                  ) : magazines?.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">אין מותגים במערכת</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {magazines?.map((magazine) => (
+                        <div
+                          key={magazine.id}
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        >
+                          <span className="font-medium">{magazine.name}</span>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent dir="rtl">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>מחיקת מותג</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  האם אתה בטוח שברצונך למחוק את המותג "{magazine.name}"?
+                                  פעולה זו לא ניתנת לביטול.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex-row-reverse gap-2">
+                                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteMagazine(magazine.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  מחק
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Page Templates Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                תבניות עמודים
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  placeholder="מספר עמודים"
-                  value={newPageCount}
-                  onChange={(e) => setNewPageCount(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddPageTemplate()}
-                  className="flex-1"
-                  min={1}
-                />
-                <Button onClick={handleAddPageTemplate} disabled={createPageTemplate.isPending}>
-                  <Plus className="w-4 h-4 ml-2" />
-                  הוסף
-                </Button>
-              </div>
+              {/* Page Templates Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    תבניות עמודים
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder="מספר עמודים"
+                      value={newPageCount}
+                      onChange={(e) => setNewPageCount(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddPageTemplate()}
+                      className="flex-1"
+                      min={1}
+                    />
+                    <Button onClick={handleAddPageTemplate} disabled={createPageTemplate.isPending}>
+                      <Plus className="w-4 h-4 ml-2" />
+                      הוסף
+                    </Button>
+                  </div>
 
-              {isLoadingTemplates ? (
-                <p className="text-muted-foreground text-sm">טוען...</p>
-              ) : pageTemplates?.length === 0 ? (
-                <p className="text-muted-foreground text-sm">אין תבניות עמודים במערכת</p>
-              ) : (
-                <div className="space-y-2">
-                  {pageTemplates?.map((template) => (
-                    <div
-                      key={template.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                    >
-                      <span className="font-medium">{template.page_count} עמודים</span>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>מחיקת תבנית עמודים</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              האם אתה בטוח שברצונך למחוק את התבנית של {template.page_count} עמודים?
-                              פעולה זו לא ניתנת לביטול.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex-row-reverse gap-2">
-                            <AlertDialogCancel>ביטול</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeletePageTemplate(template.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              מחק
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                  {isLoadingTemplates ? (
+                    <p className="text-muted-foreground text-sm">טוען...</p>
+                  ) : pageTemplates?.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">אין תבניות עמודים במערכת</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {pageTemplates?.map((template) => (
+                        <div
+                          key={template.id}
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        >
+                          <span className="font-medium">{template.page_count} עמודים</span>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent dir="rtl">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>מחיקת תבנית עמודים</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  האם אתה בטוח שברצונך למחוק את התבנית של {template.page_count} עמודים?
+                                  פעולה זו לא ניתנת לביטול.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex-row-reverse gap-2">
+                                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeletePageTemplate(template.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  מחק
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Email Templates Tab */}
+          <TabsContent value="emails" className="mt-6">
+            <EmailTemplatesSettings />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
