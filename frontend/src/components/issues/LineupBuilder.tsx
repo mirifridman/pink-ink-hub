@@ -828,10 +828,12 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
     }
   };
 
-  // Get editors assigned to this issue for the responsible editor dropdown
-  const assignedEditors = existingIssueId
-    ? issueEditors.map((ie) => ie.editor).filter(Boolean) as { id: string; full_name: string | null; email: string | null }[]
-    : allEditors.filter((e) => pendingEditors.includes(e.id));
+  // Get all editors for the editor selection - show all available editors
+  const assignedEditors = allEditors.map(e => ({
+    id: e.id,
+    full_name: e.full_name,
+    email: e.email
+  }));
 
   return (
     <div className="space-y-6" dir="rtl">
