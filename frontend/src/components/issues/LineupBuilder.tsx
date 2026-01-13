@@ -8,6 +8,7 @@ import { Plus, Trash2, Save, GripVertical, ArrowUpDown, ChevronUp, ChevronDown, 
 import { PagePickerModal } from "./PagePickerModal";
 import { MultiSupplierSelect } from "./MultiSupplierSelect";
 import { EditorSelect } from "./EditorSelect";
+import { MultiEditorSelect } from "./MultiEditorSelect";
 import { IssueEditorsSection } from "./IssueEditorsSection";
 import { NewIssueData } from "./NewIssueModal";
 import { ContentTypeSelect } from "@/components/lineup/ContentTypeSelect";
