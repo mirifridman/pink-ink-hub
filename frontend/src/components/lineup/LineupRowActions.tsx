@@ -7,11 +7,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Send, Bell, MoreHorizontal, Check, ExternalLink } from "lucide-react";
+import { Send, Bell, MoreHorizontal, Check, Mail, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateReminder, useLineupItemReminders } from "@/hooks/useReminders";
+import { useEmail } from "@/hooks/useEmail";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -20,6 +21,7 @@ interface LineupRowActionsProps {
   supplierId: string | null;
   supplierName: string | null;
   supplierPhone: string | null;
+  supplierEmail?: string | null;
   content: string;
   pageStart: number;
   pageEnd: number;
@@ -36,6 +38,7 @@ export function LineupRowActions({
   supplierId,
   supplierName,
   supplierPhone,
+  supplierEmail,
   content,
   pageStart,
   pageEnd,
@@ -50,6 +53,7 @@ export function LineupRowActions({
   const { user } = useAuth();
   const createReminder = useCreateReminder();
   const { data: existingReminders } = useLineupItemReminders(lineupItemId);
+  const { sendAssignmentNotification, sendDeadlineReminder, isSending } = useEmail();
   
   const hasAssignmentSent = existingReminders?.some(r => r.type === 'assignment' && r.status === 'sent');
   const hasReminderSent = existingReminders?.some(r => r.type !== 'assignment' && r.status === 'sent');
@@ -57,114 +61,116 @@ export function LineupRowActions({
   const pages = pageStart === pageEnd ? String(pageStart) : `${pageStart}-${pageEnd}`;
   const deadline = format(new Date(designStartDate), "dd/MM/yyyy", { locale: he });
 
-  const generateAssignmentMessage = () => {
-    return `שלום ${supplierName},
-
-הוקצאה לך משימת כתיבה:
-📖 מגזין: ${magazineName}
-📑 גיליון: #${issueNumber} - ${issueTheme}
-📄 מדור: ${content}
-📐 עמודים: ${pages}
-📅 יש להגיש עד: ${deadline}
-
-בברכה,
-${editorName}`;
-  };
-
-  const generateReminderMessage = () => {
-    return `שלום ${supplierName},
-
-תזכורת לגבי משימת הכתיבה שלך:
-📄 מדור: ${content}
-📅 יש להגיש עד: ${deadline}
-
-בברכה,
-${editorName}`;
-  };
-
-  const openWhatsApp = (message: string) => {
-    if (!supplierPhone) {
+  const handleSendAssignmentEmail = async () => {
+    if (!supplierId || !supplierEmail) {
       toast({
-        title: "אין מספר טלפון",
-        description: "לא הוזן מספר טלפון לספק זה",
+        title: "אין כתובת אימייל",
+        description: "לא הוזנה כתובת אימייל לספק זה",
         variant: "destructive",
       });
       return;
     }
 
-    // Clean phone number
-    const cleanPhone = supplierPhone.replace(/\D/g, '');
-    const encodedMessage = encodeURIComponent(message);
-    const url = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-    window.open(url, '_blank');
-  };
-
-  const handleSendAssignment = async () => {
-    if (!supplierId) return;
-
-    const message = generateAssignmentMessage();
-    
-    // Create reminder record
     try {
-      await createReminder.mutateAsync({
-        lineup_item_id: lineupItemId,
-        insert_id: null,
-        supplier_id: supplierId,
-        issue_id: issueId,
-        type: 'assignment',
-        message,
-        scheduled_for: new Date().toISOString(),
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-        sent_by: user?.id || null,
-      });
+      // Send email
+      const success = await sendAssignmentNotification(
+        supplierEmail,
+        {
+          supplierName: supplierName || 'ספק',
+          editorName: editorName,
+          issueName: `${magazineName} גיליון #${issueNumber} - ${issueTheme}`,
+          contentTitle: content,
+          pages: pages,
+          deadline: designStartDate,
+          notes: undefined,
+        },
+        false // Don't show default toast, we'll handle it
+      );
 
-      openWhatsApp(message);
+      if (success) {
+        // Create reminder record
+        await createReminder.mutateAsync({
+          lineup_item_id: lineupItemId,
+          insert_id: null,
+          supplier_id: supplierId,
+          issue_id: issueId,
+          type: 'assignment',
+          message: `הקצאה נשלחה במייל ל${supplierEmail}`,
+          scheduled_for: new Date().toISOString(),
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          sent_by: user?.id || null,
+        });
 
-      toast({
-        title: "הקצאה נשלחה",
-        description: `הקצאה נשלחה ל${supplierName}`,
-      });
+        toast({
+          title: "✅ הקצאה נשלחה במייל",
+          description: `הקצאה נשלחה ל${supplierName} (${supplierEmail})`,
+        });
+      }
     } catch (error) {
-      console.error("Error creating reminder:", error);
+      console.error("Error sending assignment email:", error);
       toast({
         title: "שגיאה",
-        description: "לא ניתן לשמור את התזכורת",
+        description: "לא ניתן לשלוח את המייל",
         variant: "destructive",
       });
     }
   };
 
-  const handleSendReminder = async () => {
-    if (!supplierId) return;
-
-    const message = generateReminderMessage();
-    
-    try {
-      await createReminder.mutateAsync({
-        lineup_item_id: lineupItemId,
-        insert_id: null,
-        supplier_id: supplierId,
-        issue_id: issueId,
-        type: 'custom',
-        message,
-        scheduled_for: new Date().toISOString(),
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-        sent_by: user?.id || null,
-      });
-
-      openWhatsApp(message);
-
+  const handleSendReminderEmail = async () => {
+    if (!supplierId || !supplierEmail) {
       toast({
-        title: "תזכורת נשלחה",
-        description: `תזכורת נשלחה ל${supplierName}`,
+        title: "אין כתובת אימייל",
+        description: "לא הוזנה כתובת אימייל לספק זה",
+        variant: "destructive",
       });
+      return;
+    }
+
+    // Calculate days left
+    const today = new Date();
+    const deadlineDate = new Date(designStartDate);
+    const daysLeft = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    try {
+      // Send email
+      const success = await sendDeadlineReminder(
+        supplierEmail,
+        {
+          editorName: supplierName || 'ספק',
+          issueName: `${magazineName} גיליון #${issueNumber} - ${issueTheme}`,
+          contentItems: [{ title: content, pages: pages }],
+          deadline: designStartDate,
+          daysLeft: daysLeft,
+        },
+        false // Don't show default toast
+      );
+
+      if (success) {
+        // Create reminder record
+        await createReminder.mutateAsync({
+          lineup_item_id: lineupItemId,
+          insert_id: null,
+          supplier_id: supplierId,
+          issue_id: issueId,
+          type: 'custom',
+          message: `תזכורת נשלחה במייל ל${supplierEmail}`,
+          scheduled_for: new Date().toISOString(),
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          sent_by: user?.id || null,
+        });
+
+        toast({
+          title: "✅ תזכורת נשלחה במייל",
+          description: `תזכורת נשלחה ל${supplierName} (${supplierEmail})`,
+        });
+      }
     } catch (error) {
-      console.error("Error creating reminder:", error);
+      console.error("Error sending reminder email:", error);
       toast({
         title: "שגיאה",
-        description: "לא ניתן לשמור את התזכורת",
+        description: "לא ניתן לשלוח את המייל",
         variant: "destructive",
       });
     }
@@ -174,46 +180,60 @@ ${editorName}`;
     return null;
   }
 
+  const hasEmail = !!supplierEmail;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
+          {isSending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <MoreHorizontal className="h-4 w-4" />
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem
-          onClick={handleSendAssignment}
+          onClick={handleSendAssignmentEmail}
           className="cursor-pointer"
+          disabled={!hasEmail || isSending}
         >
-          <Send className={cn(
+          <Mail className={cn(
             "w-4 h-4 ml-2",
             hasAssignmentSent ? "text-emerald-500" : "text-muted-foreground"
           )} />
-          שלח הקצאה לספק
-          {hasAssignmentSent && <Check className="w-3 h-3 mr-auto text-emerald-500" />}
+          <span className="flex-1">שלח הקצאה במייל</span>
+          {hasAssignmentSent && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={handleSendReminder}
+          onClick={handleSendReminderEmail}
           className="cursor-pointer"
+          disabled={!hasEmail || isSending}
         >
           <Bell className={cn(
             "w-4 h-4 ml-2",
             hasReminderSent ? "text-orange-500" : "text-muted-foreground"
           )} />
-          שלח תזכורת
-          {hasReminderSent && <Check className="w-3 h-3 mr-auto text-orange-500" />}
+          <span className="flex-1">שלח תזכורת במייל</span>
+          {hasReminderSent && <Check className="w-3 h-3 mr-1 text-orange-500" />}
         </DropdownMenuItem>
-        {supplierPhone && (
+        
+        {!hasEmail && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => openWhatsApp('')}
-              className="cursor-pointer"
-            >
-              <ExternalLink className="w-4 h-4 ml-2 text-muted-foreground" />
-              פתח ווטסאפ
-            </DropdownMenuItem>
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              ⚠️ לספק זה אין אימייל מוגדר
+            </div>
+          </>
+        )}
+        
+        {hasEmail && (
+          <>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
+              📧 {supplierEmail}
+            </div>
           </>
         )}
       </DropdownMenuContent>
