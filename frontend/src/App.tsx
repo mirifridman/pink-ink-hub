@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 
-import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Issues from "./pages/Issues";
@@ -35,71 +34,19 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/magic" element={<MagicLink />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/issues" element={
-              <ProtectedRoute>
-                <Issues />
-              </ProtectedRoute>
-            } />
-            <Route path="/lineup" element={
-              <ProtectedRoute>
-                <Lineup />
-              </ProtectedRoute>
-            } />
-            <Route path="/suppliers" element={
-              <ProtectedRoute>
-                <Suppliers />
-              </ProtectedRoute>
-            } />
-            <Route path="/team" element={
-              <ProtectedRoute>
-                <Team />
-              </ProtectedRoute>
-            } />
-            <Route path="/reminders" element={
-              <ProtectedRoute>
-                <Reminders />
-              </ProtectedRoute>
-            } />
-            <Route path="/schedule" element={
-              <ProtectedRoute>
-                <Schedule />
-              </ProtectedRoute>
-            } />
-            <Route path="/messages" element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } />
-            <Route path="/users" element={
-              <ProtectedRoute adminOnly>
-                <Users />
-              </ProtectedRoute>
-            } />
-            <Route path="/permissions" element={
-              <ProtectedRoute adminOnly>
-                <Permissions />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
-            <Route path="/emails" element={
-              <ProtectedRoute adminOnly>
-                <EmailAnalytics />
-              </ProtectedRoute>
-            } />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/issues" element={<Issues />} />
+            <Route path="/lineup" element={<Lineup />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/reminders" element={<Reminders />} />
+            <Route path="/schedule" element={<Schedule />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/permissions" element={<Permissions />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/emails" element={<EmailAnalytics />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
