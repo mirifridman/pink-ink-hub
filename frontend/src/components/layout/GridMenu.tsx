@@ -41,7 +41,8 @@ const menuItems: MenuItem[] = [
   { id: "reminders", label: "תזכורות", icon: Bell, path: "/reminders", permissionKey: "view_reminders", badgeKey: "reminders" },
   { id: "schedule", label: "לוח רבעוני", icon: Calendar, path: "/schedule", permissionKey: "view_schedule" },
   { id: "messages", label: "הודעות מערכת", icon: MessageSquare, path: "/messages", permissionKey: "view_messages", badgeKey: "notifications" },
-  { id: "users", label: "ניהול משתמשים", icon: Settings, path: "/users", permissionKey: "view_users", adminOnly: true },
+  { id: "settings", label: "הגדרות", icon: Settings, path: "/settings", permissionKey: "view_settings" },
+  { id: "users", label: "ניהול משתמשים", icon: UserCog, path: "/users", permissionKey: "view_users", adminOnly: true },
   { id: "permissions", label: "ניהול הרשאות", icon: Shield, path: "/permissions", permissionKey: "manage_settings", adminOnly: true },
 ];
 
