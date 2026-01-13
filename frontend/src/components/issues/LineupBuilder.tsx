@@ -977,8 +977,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                     placeholder="הערות"
                   />
                 </TableCell>
-                {assignedEditors.length > 0 && (
-                  <TableCell>
+                <TableCell>
                     <MultiEditorSelect
                       selectedEditorIds={row.editorIds || []}
                       responsibleEditorId={row.responsibleEditorId}
@@ -990,7 +989,6 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                       placeholder="בחר עורכים"
                     />
                   </TableCell>
-                )}
                 <TableCell>
                   <Button
                     variant="ghost"
