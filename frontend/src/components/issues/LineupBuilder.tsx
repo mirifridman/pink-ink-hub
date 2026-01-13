@@ -144,6 +144,8 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
         const supplierIds = (item as any).lineup_item_suppliers?.length > 0
           ? (item as any).lineup_item_suppliers.map((lis: any) => lis.supplier_id)
           : item.supplier_id ? [item.supplier_id] : [];
+        // Get editor IDs - for now use responsible_editor_id as single editor
+        const editorIds = (item as any).responsible_editor_id ? [(item as any).responsible_editor_id] : [];
         return {
           id: item.id,
           pages,
@@ -152,6 +154,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
           contentType: (item as any).content_type || "",
           content: item.content,
           supplierIds,
+          editorIds,
           source: item.source || "",
           notes: item.notes || "",
           responsibleEditorId: (item as any).responsible_editor_id || undefined,
