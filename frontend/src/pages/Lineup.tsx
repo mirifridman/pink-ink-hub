@@ -673,6 +673,7 @@ export default function Lineup() {
                                         supplierId={item.supplier_id || null}
                                         supplierName={item.supplier?.name || null}
                                         supplierPhone={item.supplier?.phone || null}
+                                        supplierEmail={item.supplier?.email || null}
                                         content={item.content}
                                         pageStart={item.page_start}
                                         pageEnd={item.page_end}
