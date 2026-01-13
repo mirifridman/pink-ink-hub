@@ -67,12 +67,8 @@ export function DesktopSidebar() {
   const { data: pendingRemindersCount } = usePendingRemindersCount();
   const { data: unreadNotificationsCount } = useUnreadNotificationsCount();
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    if (role === "admin") return true;
-    if (item.adminOnly) return false;
-    if (permissionsLoading || !permissions) return false;
-    return permissions[item.permissionKey] === true;
-  });
+  // Show all menu items without permission check
+  const filteredMenuItems = menuItems;
 
   const getBadgeCount = (badgeKey?: "reminders" | "notifications") => {
     if (badgeKey === "reminders") return pendingRemindersCount || 0;
