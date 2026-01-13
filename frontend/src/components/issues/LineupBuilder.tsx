@@ -246,6 +246,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
       contentType: "",
       content: "",
       supplierIds: [],
+      editorIds: [],
       source: "",
       notes: "",
       responsibleEditorId: undefined,
