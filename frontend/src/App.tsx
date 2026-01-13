@@ -21,6 +21,7 @@ import Permissions from "./pages/Permissions";
 import NotFound from "./pages/NotFound";
 import MagicLink from "./pages/MagicLink";
 import Profile from "./pages/Profile";
+import EmailAnalytics from "./pages/EmailAnalytics";
 
 const queryClient = new QueryClient();
 
