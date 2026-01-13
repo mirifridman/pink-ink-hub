@@ -95,6 +95,11 @@ const App = () => (
                 <Profile />
               </ProtectedRoute>
             } />
+            <Route path="/emails" element={
+              <ProtectedRoute adminOnly>
+                <EmailAnalytics />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
