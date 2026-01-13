@@ -16,7 +16,13 @@
 3. הדבק את תוכן הקובץ `01_email_queue_table.sql`
 4. לחץ **Run**
 
-## שלב 3: יצירת Edge Function - send-email
+## שלב 3: יצירת טבלת תבניות מיילים (חדש!)
+
+1. ב-SQL Editor
+2. הדבק את תוכן הקובץ `04_email_templates_table.sql`
+3. לחץ **Run**
+
+## שלב 4: יצירת Edge Function - send-email
 
 1. היכנס ל-Supabase Dashboard
 2. לך ל-**Edge Functions**
@@ -26,7 +32,7 @@
 6. **חשוב:** עדכן את ה-`from` email לדומיין שלך!
 7. לחץ **Deploy**
 
-## שלב 4: יצירת Edge Function - check-deadlines (אופציונלי)
+## שלב 5: יצירת Edge Function - check-deadlines (אופציונלי)
 
 1. לך ל-**Edge Functions**
 2. לחץ **Create a new function**
@@ -34,7 +40,7 @@
 4. הדבק את תוכן `03_edge_function_check_deadlines.ts`
 5. לחץ **Deploy**
 
-## שלב 5: הגדרת CRON Job (אופציונלי)
+## שלב 6: הגדרת CRON Job (אופציונלי)
 
 כדי להפעיל את ה-check-deadlines אוטומטית:
 
@@ -59,8 +65,8 @@ SELECT cron.schedule(
 ## בדיקה
 
 1. היכנס לאפליקציה
-2. לך ל-**/emails** (רק למנהלים)
-3. בטאב "בדיקה" - שלח מייל בדיקה
+2. לך ל-**הגדרות** > **תבניות מיילים**
+3. שלח מייל בדיקה מהטאב "בדיקה" בדף `/emails`
 4. בדוק שהמייל הגיע
 
 ## אינטגרציה בקוד
@@ -71,7 +77,7 @@ SELECT cron.schedule(
 import { useEmail } from '@/hooks/useEmail';
 
 const MyComponent = () => {
-  const { sendDeadlineReminder, sendTestEmail, isSending } = useEmail();
+  const { sendTestEmail, sendDeadlineReminder, isSending } = useEmail();
 
   const handleSendReminder = async () => {
     await sendDeadlineReminder('user@example.com', {
@@ -100,3 +106,11 @@ const MyComponent = () => {
 - `weeklyReportTemplate` - דו"ח שבועי
 - `generalReminderTemplate` - תזכורת כללית
 - `testEmailTemplate` - מייל בדיקה
+
+## עריכת תבניות
+
+1. לך ל-**הגדרות** > **תבניות מיילים**
+2. לחץ על התבנית שברצונך לערוך
+3. ערוך את הנושא והתוכן
+4. השתמש במשתנים בסוגריים מסולסלים: `{{variable_name}}`
+5. לחץ "שמור"
