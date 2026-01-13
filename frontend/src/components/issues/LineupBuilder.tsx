@@ -710,6 +710,30 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
             }
           }
         }
+
+        // Send email notifications to suppliers for new issues (not drafts, not auto-save)
+        if (!asDraft && !isAutoSave) {
+          // Collect unique supplier IDs from all lineup rows
+          const uniqueSupplierIds = new Set<string>();
+          lineupRows.forEach(row => {
+            row.supplierIds.forEach(id => uniqueSupplierIds.add(id));
+          });
+          
+          // Get supplier details and send emails
+          const suppliersToNotify = allSuppliers
+            .filter(s => uniqueSupplierIds.has(s.id) && s.email)
+            .map(s => ({ email: s.email!, name: s.name }));
+          
+          if (suppliersToNotify.length > 0) {
+            // Don't await - send emails in the background
+            notifyNewIssueToSuppliers(suppliersToNotify, {
+              magazineName: issueData.theme, // Using theme as magazine name for now
+              issueNumber: issueData.issue_number,
+              theme: issueData.theme,
+              deadline: format(issueData.sketch_close_date, "yyyy-MM-dd"),
+            }).catch(err => console.error("Error sending new issue emails:", err));
+          }
+        }
       }
 
       if (isAutoSave) {
