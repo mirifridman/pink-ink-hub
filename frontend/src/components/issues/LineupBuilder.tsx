@@ -65,6 +65,7 @@ interface LineupRow {
   contentType: string;
   content: string;
   supplierIds: string[];
+  editorIds: string[];
   source: string;
   notes: string;
   responsibleEditorId?: string;
