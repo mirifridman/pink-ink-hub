@@ -53,17 +53,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { data: pendingRemindersCount } = usePendingRemindersCount();
   const { data: unreadNotificationsCount } = useUnreadNotificationsCount();
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    // Admin always has access to everything
-    if (role === "admin") return true;
-    
-    // Admin-only items are only shown to admins
-    if (item.adminOnly) return false;
-    
-    // Check permission from database
-    if (permissionsLoading || !permissions) return false;
-    return permissions[item.permissionKey] === true;
-  });
+  // Show all menu items without permission check
+  const filteredMenuItems = menuItems;
 
   const getBadgeCount = (badgeKey?: "reminders" | "notifications") => {
     if (badgeKey === "reminders") return pendingRemindersCount || 0;
