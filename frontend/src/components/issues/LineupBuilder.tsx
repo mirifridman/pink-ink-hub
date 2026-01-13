@@ -979,11 +979,15 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
                 </TableCell>
                 {assignedEditors.length > 0 && (
                   <TableCell>
-                    <EditorSelect
-                      value={row.responsibleEditorId}
-                      onChange={(id) => updateRow(row.id, { responsibleEditorId: id })}
+                    <MultiEditorSelect
+                      selectedEditorIds={row.editorIds || []}
+                      responsibleEditorId={row.responsibleEditorId}
+                      onChange={(editorIds, responsibleId) => updateRow(row.id, { 
+                        editorIds, 
+                        responsibleEditorId: responsibleId 
+                      })}
                       editors={assignedEditors}
-                      placeholder="בחר עורך"
+                      placeholder="בחר עורכים"
                     />
                   </TableCell>
                 )}
