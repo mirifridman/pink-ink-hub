@@ -120,8 +120,12 @@ export function GridMenu() {
     };
   }, [isOpen]);
 
-  // Show all menu items without permission check
-  const filteredMenuItems = menuItems;
+  // Filter menu items based on role - admin sees everything
+  const filteredMenuItems = menuItems.filter((item) => {
+    if (role === "admin") return true;
+    if (item.adminOnly) return false;
+    return true; // Show all non-admin items to logged-in users
+  });
 
   const getBadgeCount = (badgeKey?: "reminders" | "notifications") => {
     if (badgeKey === "reminders") return pendingRemindersCount || 0;
