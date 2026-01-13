@@ -37,9 +37,9 @@ const menuItems: MenuItem[] = [
   { icon: Bell, label: "תזכורות", path: "/reminders", permissionKey: "view_reminders", badgeKey: "reminders" },
   { icon: Calendar, label: "לוח רבעוני", path: "/schedule", permissionKey: "view_schedule" },
   { icon: MessageSquare, label: "הודעות מערכת", path: "/messages", permissionKey: "view_messages", badgeKey: "notifications" },
+  { icon: Settings, label: "הגדרות", path: "/settings", permissionKey: "view_settings" },
   { icon: UserCog, label: "ניהול משתמשים", path: "/users", permissionKey: "view_users", adminOnly: true },
   { icon: Shield, label: "ניהול הרשאות", path: "/permissions", permissionKey: "manage_settings", adminOnly: true },
-  { icon: Settings, label: "הגדרות", path: "/settings", permissionKey: "view_settings", adminOnly: true },
 ];
 
 interface AppSidebarProps {
