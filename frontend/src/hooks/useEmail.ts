@@ -166,6 +166,66 @@ export function useEmail() {
     return result.success;
   }, []);
 
+  // שליחת הודעה על גיליון חדש לכל הספקים
+  const notifyNewIssueToSuppliers = useCallback(async (
+    suppliers: Array<{ email: string; name: string }>,
+    issueData: {
+      magazineName: string;
+      issueNumber: number;
+      theme: string;
+      deadline: string;
+    }
+  ): Promise<{ sent: number; failed: number }> => {
+    let sent = 0;
+    let failed = 0;
+
+    for (const supplier of suppliers) {
+      if (!supplier.email) continue;
+      
+      try {
+        const success = await sendNewIssueNotification(
+          supplier.email,
+          {
+            editorName: supplier.name,
+            issueName: `${issueData.magazineName} #${issueData.issueNumber}`,
+            issueNumber: issueData.issueNumber,
+            theme: issueData.theme,
+            startDate: issueData.deadline,
+            deadline: issueData.deadline,
+          },
+          false // Don't show individual toasts
+        );
+        
+        if (success) {
+          sent++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        failed++;
+        console.error(`Failed to send email to ${supplier.email}:`, error);
+      }
+    }
+
+    // Show summary toast
+    if (sent > 0) {
+      toast({
+        title: `📧 נשלחו ${sent} הודעות`,
+        description: failed > 0 
+          ? `${failed} מיילים נכשלו` 
+          : 'כל הספקים קיבלו הודעה על הגיליון החדש',
+      });
+    } else if (failed > 0) {
+      toast({
+        title: 'שגיאה בשליחת המיילים',
+        description: `${failed} מיילים נכשלו`,
+        variant: 'destructive',
+      });
+    }
+
+    return { sent, failed };
+  }, [sendNewIssueNotification, toast]);
+
   return {
     isSending,
     sendDeadlineReminder,
@@ -175,6 +235,7 @@ export function useEmail() {
     sendGeneralReminder,
     sendTestEmail,
     queueDeadlineReminder,
+    notifyNewIssueToSuppliers,
     // Raw functions for custom emails
     sendEmail,
     queueEmail
