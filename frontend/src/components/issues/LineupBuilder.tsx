@@ -88,6 +88,7 @@ const AUTO_SAVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
 export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: LineupBuilderProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { notifyNewIssueToSuppliers } = useEmail();
   const createIssue = useCreateIssue();
   const updateIssue = useUpdateIssue();
   const createLineupItem = useCreateLineupItem();
@@ -101,6 +102,7 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
   const swapLineupPages = useSwapLineupPages();
   const batchUpdateLineupPages = useBatchUpdateLineupPages();
   const updateLineupItemSuppliers = useUpdateLineupItemSuppliers();
+  const { data: allSuppliers = [] } = useSuppliers();
   
   // Editors data
   const { data: allEditors = [] } = useEditors();
