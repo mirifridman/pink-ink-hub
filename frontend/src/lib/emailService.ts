@@ -12,15 +12,37 @@ export async function sendEmail(
   html: string
 ): Promise<EmailResponse> {
   try {
+    console.log('Sending email to:', to);
+    console.log('Subject:', subject);
+    
+    // Get the current session for auth
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.error('No active session');
+      return { success: false, error: 'No active session' };
+    }
+
     const { data, error } = await supabase.functions.invoke('send-email', {
-      body: { to, subject, html }
+      body: { to, subject, html },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     });
+
+    console.log('Edge function response:', { data, error });
 
     if (error) {
       console.error('Email sending error:', error);
       return { success: false, error: error.message };
     }
 
+    if (data && data.success === false) {
+      console.error('Email sending failed:', data.error);
+      return { success: false, error: data.error };
+    }
+
+    console.log('Email sent successfully!');
     return data as EmailResponse;
   } catch (err) {
     console.error('Email sending exception:', err);
