@@ -883,7 +883,9 @@ export function LineupBuilder({ issueData, existingIssueId, onBack, onClose }: L
               <TableHead className="text-right">תוכן</TableHead>
               <TableHead className="text-right w-40">ספק</TableHead>
               <TableHead className="text-right w-32">הערות</TableHead>
-              <TableHead className="text-right w-44">עורכים</TableHead>
+              {showResponsibleEditorColumn && (
+                <TableHead className="text-right w-40">עורך אחראי</TableHead>
+              )}
               <TableHead className="w-20"></TableHead>
             </TableRow>
           </TableHeader>
