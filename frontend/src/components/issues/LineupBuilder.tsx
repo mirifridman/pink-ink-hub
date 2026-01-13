@@ -15,9 +15,11 @@ import {
   useCreateIssue, useUpdateIssue, useCreateLineupItem, useUpdateLineupItem, 
   useDeleteLineupItem, useCreateInsert, useUpdateInsert, useDeleteInsert, 
   useLineupItems, useInserts, useEditors, useIssueEditors, useAddIssueEditor, 
-  useRemoveIssueEditor, useSwapLineupPages, useBatchUpdateLineupPages, useUpdateLineupItemSuppliers
+  useRemoveIssueEditor, useSwapLineupPages, useBatchUpdateLineupPages, useUpdateLineupItemSuppliers,
+  useSuppliers
 } from "@/hooks/useIssues";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmail } from "@/hooks/useEmail";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
