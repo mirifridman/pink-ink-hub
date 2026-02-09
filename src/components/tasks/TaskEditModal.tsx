@@ -678,6 +678,7 @@ export function TaskEditModal({ task, isOpen, onClose, mode, defaultProjectId, e
             />
           </div>
 
+
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">תיאור</Label>
@@ -690,89 +691,85 @@ export function TaskEditModal({ task, isOpen, onClose, mode, defaultProjectId, e
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Priority */}
-            <div className="space-y-2">
-              <Label>עדיפות</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorityOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Status */}
-            <div className="space-y-2">
-              <Label>סטטוס</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Deadline - prominent and below description */}
+          <div className="space-y-2 mt-2">
+            <Label className="text-base font-normal flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              דדליין
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-right font-normal text-base h-11 border border-primary',
+                    !dueDate && 'text-muted-foreground border-border'
+                  )}
+                >
+                  <CalendarIcon className="ml-2 h-5 w-5" />
+                  {dueDate ? format(dueDate, 'd בMMM yyyy', { locale: he }) : 'בחר תאריך'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={setDueDate}
+                  locale={he}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Project */}
-            <div className="space-y-2">
-              <Label>שיוך לפרויקט</Label>
-              <Select value={projectId || 'none'} onValueChange={(v) => setProjectId(v === 'none' ? '' : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="בחר פרויקט" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">ללא פרויקט</SelectItem>
-                  {projects?.map((proj) => (
-                    <SelectItem key={proj.id} value={proj.id}>
-                      <div className="flex items-center gap-2">
-                        <FolderKanban className="h-4 w-4" />
+          {/* Priority, Status, Project - merged to one row under deadline */}
+          <div className="flex flex-col mt-2">
+            <div className="flex flex-row gap-2 items-center">
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">עדיפות</Label>
+                <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priorityOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">סטטוס</Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">פרויקט</Label>
+                <Select value={projectId || 'none'} onValueChange={(v) => setProjectId(v === 'none' ? '' : v)}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="ללא" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">ללא פרויקט</SelectItem>
+                    {projects?.map((proj) => (
+                      <SelectItem key={proj.id} value={proj.id}>
                         {proj.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Due Date */}
-            <div className="space-y-2">
-              <Label>תאריך יעד</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-right font-normal',
-                      !dueDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="ml-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, 'd בMMM yyyy', { locale: he }) : 'בחר תאריך'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    locale={he}
-                  />
-                </PopoverContent>
-              </Popover>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -883,58 +880,8 @@ export function TaskEditModal({ task, isOpen, onClose, mode, defaultProjectId, e
             </div>
           </div>
 
-          {/* Contact Person */}
-          <Separator />
-          <div className="space-y-4">
-            <Label className="flex items-center gap-2 text-base font-medium">
-              <User className="h-4 w-4" />
-              איש קשר
-            </Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contactName" className="text-sm">שם</Label>
-                <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contactName"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder="שם איש קשר"
-                    className="pr-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactPhone" className="text-sm">טלפון</Label>
-                <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contactPhone"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder="מספר טלפון"
-                    className="pr-10"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactEmail" className="text-sm">אימייל</Label>
-                <div className="relative">
-                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="כתובת אימייל"
-                    className="pr-10"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+
+          {/* Contact Person section removed as requested */}
 
           {/* Approval Section - Show for edit mode OR after creating a new task */}
           {(mode === 'edit' && task) ? (
