@@ -1,0 +1,1 @@
+UPDATE profiles SET full_name = 'מנכ״ל' WHERE id = '8b962359-98c8-4df9-8689-37460561cc28';

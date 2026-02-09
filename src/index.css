@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Mode - Clean & Minimalist */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Neon Lime/Acid Green accent */
+    --primary: 72 85% 66%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 72 85% 60%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 72 85% 66%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 210 20% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 72 85% 66%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 210 20% 90%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 20% 90%;
+    --sidebar-ring: 72 85% 66%;
+    --sidebar-muted: 215 16% 47%;
+  }
+
+  .dark {
+    /* Dark Mode - High-End Dark */
+    --background: 222 47% 11%;
+    --foreground: 210 20% 98%;
+
+    --card: 217 33% 17%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 20% 98%;
+
+    /* Neon Lime/Acid Green accent - pops against dark */
+    --primary: 72 85% 66%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 22%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 217 33% 20%;
+    --muted-foreground: 215 16% 60%;
+
+    --accent: 72 85% 60%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 85% 45%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 72 85% 66%;
+
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 72 85% 66%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 14%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-ring: 72 85% 66%;
+    --sidebar-muted: 215 16% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    direction: rtl;
+  }
+
+  body {
+    @apply text-foreground antialiased;
+    font-family: 'Heebo', 'Segoe UI', sans-serif;
+    background-color: hsl(var(--background));
+  }
+
+  /* Light mode - diagonal stripes background image */
+  :root:not(.dark) body {
+    /* Add a 90% background-color overlay so the image shows at ~10% intensity */
+    background-image:
+      linear-gradient(
+        hsl(var(--background) / 0.9),
+        hsl(var(--background) / 0.9)
+      ),
+      url('/images/light-bg-pattern.png?v=2');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Dark mode - wave pattern background */
+  .dark body {
+    background-image:
+      linear-gradient(
+        hsl(var(--background) / 0.88),
+        hsl(var(--background) / 0.88)
+      ),
+      url('/images/dark-bg-pattern.png');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    @apply bg-gradient-to-l from-primary to-accent;
+  }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-card to-muted/30;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-l from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-md bg-card/80;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .sidebar-item-active {
+    @apply bg-sidebar-accent text-sidebar-foreground border-r-2 border-primary;
+  }
+}

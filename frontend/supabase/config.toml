@@ -1,7 +1,0 @@
-project_id = "iuqozixibieeuatiyyfg"
-
-[functions.manage-users]
-verify_jwt = false
-
-[functions.check-reminders]
-verify_jwt = false

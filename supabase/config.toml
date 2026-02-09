@@ -1,0 +1,31 @@
+project_id = "wphtinxfspycdlbcdgqu"
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.n8n-webhook]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.get-vapid-key]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
+
+[functions.trigger-email-automation]
+verify_jwt = false
+
+[functions.send-email-reply]
+verify_jwt = false
+
+[functions.daily-notifications-summary]
+verify_jwt = false
+
+[functions.check-task-deadlines]
+verify_jwt = false
+
+[functions.update-user-password]
+verify_jwt = true
